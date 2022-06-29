@@ -4,3 +4,6 @@ dist
 requestify.egg-info
 test.py
 1.py
+venv
+tags
+curls

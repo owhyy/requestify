@@ -15,5 +15,5 @@ setup(name='requestify',
       url='https://github.com/minatsuki-yui/requestify',
       license="MIT Licence",
       packages=find_packages(),
-      install_requires=["requests"]
+      install_requires=["requests", "black", "pyperclip"]
       )
