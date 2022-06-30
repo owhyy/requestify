@@ -51,7 +51,7 @@ class RequestifyObject(object):
 
     def __generate(self):
         meta = self.base_string.split(" ", 2)
-        opts = None
+        opts = {}
         assert len(meta) > 1, "Not a valid cURL request"
 
         if len(meta) == 2:
@@ -81,28 +81,42 @@ class RequestifyObject(object):
                 if flag == "-X":
                     method = flag_with_method_or_header[1].rstrip(":")
                 else:
+                    opts_string = " " + opts_string
                     method = "get"
 
             opts = re.findall(" (-{1,2}\S+) ?\$?'([\S\s]+?)'", opts_string)
             self.method = method.strip("'").strip('"').lower()
 
-            assert prefix.strip("'").strip('"') == "curl", "Not a valid cURL request"
-            self.url = url.strip("'").strip('"').rstrip("/") + "/"
+            self.__set_opts(opts)
 
-        self.__set_opts(opts)
+        assert prefix.strip("'").strip('"') == "curl", "Not a valid cURL request"
+        self.url = url.strip("'").strip('"').rstrip("/")
+        # self.url = url.strip("'").strip('"').rstrip("/") + "/"
 
     def __set_opts(self, opts):
         headers = []
         for k, v in opts:
             if k == "-H":
                 headers.append(v)
-            _ = v.split(":")
-            if len(_) > 1:
-                if not isinstance(_[1], str):
-                    value_as_str = str(v)
-                    if value_as_str == "false":
-                        v.split[""] = False
-            elif k in self.__post_handler:
+
+            # possible_bool = v.split(":")
+            if v.find('false') != -1:
+                v = v.replace('false', "False")
+            elif v.find('true') != -1:
+                v = v.replace('true', "Talse")
+            # v = ":".join(possible_bool)
+
+            # if len(possible_bool) > 1:
+                ## if the value is not a string, it can be a boolean, integer ...
+                # if not isinstance(possible_bool[1], str):
+                #     possible_bool_as_str = str(v)
+                #     if possible_bool_as_str == "false":
+                #         v.split[""] = False
+                #     elif possible_bool_as_str == "true":
+                #         v.split[""] = True
+
+
+            if k in self.__post_handler and self.method == 'get':
                 self.method = "post"
                 self.data = self.__post_handler[k](v)
 
@@ -128,10 +142,10 @@ class RequestifyObject(object):
                 pass
                 # raise
 
-            if k.lower() == "cookie":
-                self.__format_cookies(v)
+            if k.lower() == "cookie":  # type: ignore
+                self.__format_cookies(v)  # type: ignore
             else:
-                self.headers[k] = v
+                self.headers[k] = v  # type: ignore
                 # self.__update_length(k)
         return self.headers
 
