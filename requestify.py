@@ -1,6 +1,7 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+import io
 import re
 import sys
 import argparse
@@ -9,24 +10,25 @@ import json
 from collections import defaultdict
 from urllib import parse, request
 from black import format_str, FileMode
+from contextlib import redirect_stdout
 
 # name that will be used for class with requests
 REQUESTS_CLASS_NAME = "RequestsTest"
 
 
 def get_data_dict(query):
-    _ = dict(parse.parse_qsl(query))
-    return _ if len(_) > 0 else query
+    data = dict(parse.parse_qsl(query))
+    return data if len(data) > 0 else query
 
 
 class RequestifyObject(object):
     def __init__(self, base_string):
-        self.base_string = base_string.strip()
+        # self.base_string = base_string.strip().replace("\\", "").replace("\n", "")
+        self.base_string = " ".join(base_string.replace("\\", "").split())
         self.url = ""
         self.method = "get"
         self.headers = {}
         self.cookies = {}
-        self.querys = {}
         self.data = None
         self.__post_handler = {
             "-d": lambda x: get_data_dict(x),
@@ -38,7 +40,6 @@ class RequestifyObject(object):
         }
         self.__opt_list = []
         self.__generate()
-        # self.__key_max_length = 0
 
     def to_file(self, filename, with_headers=True, with_cookies=True):
         self.__write_to_file(
@@ -49,14 +50,44 @@ class RequestifyObject(object):
         self.__write_to_stdio(with_headers, with_cookies)
 
     def __generate(self):
-
         meta = self.base_string.split(" ", 2)
-        assert len(meta) == 3, "Not a valid cURL request"
-        prefix, url, opts_string = meta
-        assert prefix == "curl", "Not a valid cURL request"
-        self.url = url[1:-1]
+        opts = None
+        assert len(meta) > 1, "Not a valid cURL request"
 
-        opts = re.findall(" (-{1,2}\S+) ?\$?'([\S\s]+?)'", opts_string)
+        if len(meta) == 2:
+            prefix, url = meta
+        else:
+            # normal order is curl url -X GET
+            prefix, url_or_flag, opts_string = meta
+
+            # if request is like curl -X GET url -H headers, flag will be second, not url
+            if url_or_flag == "-X":  # TODO: replace with better check (more flags)
+                # flag = "-X" maybe we'll need different flags
+                method_and_url = opts_string.split(" ", 2)
+                assert len(method_and_url) > 1, "Not a valid cURL request"
+
+                method = method_and_url[0].rstrip(":")
+                url = method_and_url[1]
+
+                if len(method_and_url) == 3:
+                    opts_string = method_and_url[2]
+            else:
+                # if request is like curl url -X GET -H headers, url will be second, and method with flag 3rd
+                url = url_or_flag
+                flag_with_method_or_header = opts_string.split(" ", 2)
+                assert len(flag_with_method_or_header) > 1, "Not a valid cURL request"
+
+                flag = flag_with_method_or_header[0]
+                if flag == "-X":
+                    method = flag_with_method_or_header[1].rstrip(":")
+                else:
+                    method = "get"
+
+            opts = re.findall(" (-{1,2}\S+) ?\$?'([\S\s]+?)'", opts_string)
+            self.method = method.strip("'").strip('"').lower()
+
+            assert prefix.strip("'").strip('"') == "curl", "Not a valid cURL request"
+            self.url = url.strip("'").strip('"').rstrip("/") + "/"
 
         self.__set_opts(opts)
 
@@ -65,6 +96,12 @@ class RequestifyObject(object):
         for k, v in opts:
             if k == "-H":
                 headers.append(v)
+            _ = v.split(":")
+            if len(_) > 1:
+                if not isinstance(_[1], str):
+                    value_as_str = str(v)
+                    if value_as_str == "false":
+                        v.split[""] = False
             elif k in self.__post_handler:
                 self.method = "post"
                 self.data = self.__post_handler[k](v)
@@ -101,7 +138,7 @@ class RequestifyObject(object):
     # returns base(without imports, only the text), unbeautified string
     def create_responses_base(self, indent="", with_headers=True, with_cookies=True):
         request_options = ""
-        wait_to_write = []
+        wait_to_write = [indent]
         if with_headers:
             wait_to_write.append(f"{indent}headers = {self.headers}")
             request_options += ", headers=headers"
@@ -124,8 +161,8 @@ class RequestifyObject(object):
         return f"\n".join(wait_to_write)
 
     # returns beautified string
-    def __create_responses_string(self, with_headers=True, with_cookies=True):
-        request_options = ""
+    def create_beautiful_response(self, with_headers=True, with_cookies=True):
+        request_options = "\t"
         response = self.create_responses_base("", with_headers, with_cookies)
         wait_to_write = [
             "import requests",
@@ -141,16 +178,23 @@ class RequestifyObject(object):
         return format_str(response, mode=FileMode())
 
     def __write_to_file(self, file, with_headers=True, with_cookies=True):
-        request = self.__create_responses_string(with_headers, with_cookies)
+        request = self.create_beautiful_response(with_headers, with_cookies)
         with open(file, "w") as f:
             f.write("\n".join(request) + "\n")
 
     def __write_to_stdio(self, with_headers=True, with_cookies=True):
-        request = self.__create_responses_string(with_headers, with_cookies)
+        request = self.create_beautiful_response(with_headers, with_cookies)
         print(request)
 
+    def execute(self, with_headers=True, with_cookies=True):
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            exec(self.create_beautiful_response(with_headers, with_cookies))
 
-class __GenerateList(object):
+        return stdout.getvalue()
+
+
+class RequestifyList(object):
     def __init__(self, base_list):
         self.base_list = base_list
         self.requests = []
@@ -196,11 +240,19 @@ class __GenerateList(object):
 
     # TODO: test this
     def __create_function_name(self, request):
-        _ = request.url.split("/")
-        url = _[2] if len(_) > 2 else _[0]
-        url = url.replace(".", "_")
+        url = re.findall(r"\/+(.*?)\/|\.(.*?)\/", request.url)
+        url_regex = re.compile(r"[^0-9a-zA-Z_]+")
+        if url:
+            # if is //url.com/
+            if url[0][0]:
+                url = re.sub(url_regex, "_", url[0][0])
+            # if is www.url.com/
+            else:
+                url = re.sub(url_regex, "_", url[0][0])
 
-        function_name = f"{url}_{request.method}"
+            function_name = f"{url}_{request.method}"
+        else:
+            function_name = f"{request.method}"
 
         function_count = self.existing_function_names[function_name]
 
@@ -225,12 +277,22 @@ class __GenerateList(object):
         requests_as_functions = self.__create_responses_text()
         print(requests_as_functions)
 
+    def execute(self, with_headers=True, with_cookies=True):
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            exec(self.__create_responses_text())
+        return stdout.getvalue()
+
 
 def __get_file(filename):
     requests = []
+    request = ""
     with open(filename, mode="r") as in_file:
         for line in in_file:
-            requests.append(line)
+            request += line
+            if re.findall("--compressed", line):
+                requests.append(request)
+                request = ""
     return requests
 
 
@@ -252,31 +314,28 @@ def from_file(filename):
     if len(requests_from_file) == 1:
         requests = RequestifyObject(requests_from_file[0])
     else:
-        requests = __GenerateList(requests_from_file)
+        requests = RequestifyList(requests_from_file)
     return requests
 
 
-flags_and_messages = {
-    "-h, --help": "Get help for commands",
-    "-c, --clipboard": "Use clipboard and write to stdout",
-    "-f [path], --file [path]": "Use cURLs from file",
-    "-o [path], --output [path]": "Write output to file",
-}
-
-
-class WriteToSTDOUT(argparse.Action):
+class UseString(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         from_string(values).to_screen()
 
 
-class ClipboardWriteToSTDOUT(argparse.Action):
+class UseClipboard(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         from_clipboard().to_screen()
 
 
-class ReadFromFileWriteToSTDOUT(argparse.Action):
+class UseFile(argparse.Action):
     def __call__(self, parser, namespace, filename, option_string=None):
         from_file(filename).to_screen()
+
+
+class WriteToFile(argparse.Action):
+    def __call__(self, parser, namespace, filename, option_string=None):
+        from_file(filename).to_file(filename)
 
 
 def main():
@@ -285,29 +344,28 @@ def main():
         "-s",
         "--string",
         nargs="?",
-        action=WriteToSTDOUT,
+        action=UseString,
         help="Use string and write to stdout",
     )
     parser.add_argument(
         "-c",
         "--clipboard",
         nargs=0,
-        action=ClipboardWriteToSTDOUT,
+        action=UseClipboard,
         help="Use clipboard and write to stdout",
     )
     parser.add_argument(
         "-f",
         "--file",
         nargs="?",
-        action=ReadFromFileWriteToSTDOUT,
+        action=UseFile,
         help="Use cURLs from file",
     )
-    # parser.add_argument(
-    #     "-o", "--output", action=PrintStringToScreen, help="Write output to file"
-    # )
+    parser.add_argument(
+        "-o", "--output", action=WriteToFile, help="Write output to file"
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     main()
-    # print(len(__get_file("curls")))
