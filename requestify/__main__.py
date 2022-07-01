@@ -1,6 +1,9 @@
 import argparse
 import sys
 import requestify
+import replace
+# from . import requestify
+# from . import replace
 
 
 def get_args():
@@ -16,7 +19,7 @@ def get_args():
     arg.add_argument(
         "-c",
         action="store_true",
-        help="Use clipboard and write to stdout",
+        help="Use cURL request from clipboard",
     )
 
     arg.add_argument(
@@ -44,10 +47,10 @@ def parse_args(parser):
         requestify.from_file(args.f).to_screen()
 
     if args.c and args.s:
-        requestify.from_string(args.s).to_clipboard()
+        requestify.from_clipboard().to_screen()
 
     if args.c and args.f:
-        requestify.from_file(args.f).to_clipboard()
+        requestify.from_clipboard().to_file(args.f)
 
     if args.s and args.o:
         requestify.from_string(args.s).to_file(args.o)
@@ -62,4 +65,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    replace.from_file('../tests/test_files/test_data.txt').create_responses_text()
+

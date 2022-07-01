@@ -7,6 +7,7 @@ import sys
 import argparse
 import pyperclip
 import json
+import requests
 from collections import defaultdict
 from urllib import parse, request
 from black import format_str, FileMode
@@ -14,11 +15,13 @@ from contextlib import redirect_stdout
 
 # name that will be used for class with requests
 REQUESTS_CLASS_NAME = "RequestsTest"
+REQUEST_VARIABLE_NAME = "RequestsTest"
 
 
 def get_data_dict(query):
     data = dict(parse.parse_qsl(query))
-    return data if len(data) > 0 else query
+    alt = query if query.startswith("'") else json.loads(query.replace( "'", '"').strip('"'))
+    return data if data else alt
 
 
 class RequestifyObject(object):
@@ -28,7 +31,7 @@ class RequestifyObject(object):
         self.method = "get"
         self.headers = {}
         self.cookies = {}
-        self.data = None
+        self.data = dict()
         self.__post_handler = {
             "-d": lambda x: get_data_dict(x),
             "--data": lambda x: get_data_dict(x),
@@ -38,6 +41,7 @@ class RequestifyObject(object):
             "--data-urlencode": lambda x: parse.quote(x),
         }
         self.__opt_list = []
+        self.existing_function_names = defaultdict(int)
         self.__generate()
 
     def __generate(self):
@@ -74,11 +78,22 @@ class RequestifyObject(object):
                 else:
                     opts_string = " " + opts_string
                     method = "get"
-
-            opts = re.findall(" (-{1,2}\S+) ?\$?'([\S\s]+?)'", opts_string)
+            # WARNING: this will not work for escaped " or ', as I first delete all \ characters
+            opts = re.findall(
+                """ (-{1,2}\S+)\s+?"([\S\s]+?)"|(-{1,2}\S+)\s+?'([\S\s]+?)'""",
+                opts_string,
+            )
             self.method = method.strip("'").strip('"').lower()
 
-            self.__set_opts(opts)
+            #TODO: find a better method(maybe replace all ' with " or vice-versa)
+            single_quoted = []
+            double_quoted = []
+
+            for option in opts:
+                single_quoted.append(option[0:2])
+                double_quoted.append(option[2:4])
+
+            self.__set_opts(single_quoted if single_quoted else double_quoted)
 
         assert prefix.strip("'").strip('"') == "curl", "Not a valid cURL request"
         self.url = url.strip("'").strip('"').rstrip("/")
@@ -94,8 +109,9 @@ class RequestifyObject(object):
             elif v.find("true") != -1:
                 v = v.replace("true", "Talse")
 
-            if k in self.__post_handler and self.method == "get":
-                self.method = "post"
+            if k in self.__post_handler:
+                if self.method == "get":
+                    self.method = "post"
                 self.data = self.__post_handler[k](v)
 
         self.__format_headers(headers)
@@ -126,7 +142,7 @@ class RequestifyObject(object):
         return self.headers
 
     # returns base(without imports, only the text), unbeautified string
-    def __create_responses_base(self, indent="", with_headers=True, with_cookies=True):
+    def create_responses_base(self, indent="", with_headers=True, with_cookies=True):
         request_options = ""
         wait_to_write = [indent]
         if with_headers:
@@ -137,12 +153,12 @@ class RequestifyObject(object):
             wait_to_write.append(f"{indent}cookies = {self.cookies}")
             request_options += ", cookies=cookies"
 
-        if self.method == "post":
+        if self.data:
             wait_to_write.append(f"{indent}data = {self.data}")
             request_options += ", data=data"
 
         wait_to_write.append(
-            f"{indent}response = requests.{self.method}('{self.url}'"
+            f"{indent}response = {REQUEST_VARIABLE_NAME}.{self.method}('{self.url}'"
             + request_options
             + ")"
         )
@@ -151,9 +167,9 @@ class RequestifyObject(object):
         return f"\n".join(wait_to_write)
 
     # returns beautified string
-    def __create_beautiful_response(self, with_headers=True, with_cookies=True):
+    def create_beautiful_response(self, with_headers=True, with_cookies=True):
         request_options = "\t"
-        response = self.__create_responses_base("", with_headers, with_cookies)
+        response = self.create_responses_base("", with_headers, with_cookies)
         wait_to_write = [
             "import requests",
             "\n",
@@ -167,13 +183,38 @@ class RequestifyObject(object):
     def __beautify_string(response):
         return format_str(response, mode=FileMode())
 
+    # TODO: test this
+    def create_function_name(self):
+        url = re.findall(r"\/+(.*?)\/|\.(.*?)\/", self.url)
+        url_regex = re.compile(r"[^0-9a-zA-Z_]+")
+        if url:
+            # if is //url.com/
+            if url[0][0]:
+                url = re.sub(url_regex, "_", url[0][0])
+            # if is www.url.com/
+            else:
+                url = re.sub(url_regex, "_", url[0][0])
+
+            # uncomment this for full url name
+            # function_name = f"{url}_{self.method}"
+            function_name = f"{url[0:25]}_{self.method}"
+        else:
+            function_name = f"{self.method}"
+
+        function_count = self.existing_function_names[function_name]
+
+        ret = f"{function_name}{'_' + str(function_count) if function_count else ''}"
+
+        self.existing_function_names[function_name] += 1
+        return ret
+
     def __write_to_file(self, file, with_headers=True, with_cookies=True):
-        request = self.__create_beautiful_response(with_headers, with_cookies)
+        request = self.create_beautiful_response(with_headers, with_cookies)
         with open(file, "w") as f:
             f.write("\n".join(request) + "\n")
 
     def __write_to_stdio(self, with_headers=True, with_cookies=True):
-        request = self.__create_beautiful_response(with_headers, with_cookies)
+        request = self.create_beautiful_response(with_headers, with_cookies)
         print(request)
 
     def to_file(self, filename, with_headers=True, with_cookies=True):
@@ -184,19 +225,22 @@ class RequestifyObject(object):
     def to_screen(self, with_headers=True, with_cookies=True):
         self.__write_to_stdio(with_headers, with_cookies)
 
-    def execute(self, with_headers=True, with_cookies=True):
-        stdout = io.StringIO()
-        with redirect_stdout(stdout):
-            exec(self.__create_beautiful_response(with_headers, with_cookies))
+    def execute(self):
+        request = requests.request(
+            method=self.method, url=self.url, headers=self.headers, cookies=self.cookies
+        )
+        try:
+            ret = request.json()
+        except json.JSONDecodeError:
+            ret = request.text
 
-        return stdout.getvalue()
+        return ret
 
 
 class RequestifyList(object):
     def __init__(self, base_list):
         self.base_list = base_list
         self.requests = []
-        self.existing_function_names = defaultdict(int)
         self.__generate()
 
     def __generate(self):
@@ -214,10 +258,10 @@ class RequestifyList(object):
         function_names = []
 
         for request in self.requests:
-            function_name = self.__create_function_name(request)
+            function_name = request.create_function_name()
             function_names.append(function_name)
 
-            response = request._RequestifyObject__create_responses_base(
+            response = request.create_responses_base(
                 indent="\t\t", with_headers=with_headers, with_cookies=with_cookies
             )
             requests_text.append(f"\tdef {function_name}(self):{response}")
@@ -233,32 +277,6 @@ class RequestifyList(object):
         requests_text.append("if __name__ == '__main__': ")
         requests_text.append(f"\t{REQUESTS_CLASS_NAME}().call_all()")
         return format_str("\n".join(requests_text), mode=FileMode())
-
-    # TODO: test this
-    # TODO: add https:// if not existing
-    def __create_function_name(self, request):
-        url = re.findall(r"\/+(.*?)\/|\.(.*?)\/", request.url)
-        url_regex = re.compile(r"[^0-9a-zA-Z_]+")
-        if url:
-            # if is //url.com/
-            if url[0][0]:
-                url = re.sub(url_regex, "_", url[0][0])
-            # if is www.url.com/
-            else:
-                url = re.sub(url_regex, "_", url[0][0])
-
-            # uncomment this for full url name
-            # function_name = f"{url}_{request.method}"
-            function_name = f"{url[0:25]}_{request.method}"
-        else:
-            function_name = f"{request.method}"
-
-        function_count = self.existing_function_names[function_name]
-
-        ret = f"{function_name}{'_' + str(function_count) if function_count else ''}"
-
-        self.existing_function_names[function_name] += 1
-        return ret
 
     def __write_to_file(self, file):
         requests_as_functions = self.__create_responses_text()
@@ -277,10 +295,11 @@ class RequestifyList(object):
         self.__write_to_stdio()
 
     def execute(self, with_headers=True, with_cookies=True):
-        stdout = io.StringIO()
-        with redirect_stdout(stdout):
-            exec(self.__create_responses_text())
-        return stdout.getvalue()
+        ret = []
+        for request in self.requests:
+            ret.append(request.execute())
+
+        return ret
 
 
 def __get_file(filename):
@@ -289,7 +308,7 @@ def __get_file(filename):
     with open(filename, mode="r") as in_file:
         for line in in_file:
             request += line
-            if re.findall("--compressed", line):
+            if re.findall("curl", line):
                 requests.append(request)
                 request = ""
     return requests
