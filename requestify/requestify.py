@@ -23,7 +23,6 @@ def get_data_dict(query):
 
 class RequestifyObject(object):
     def __init__(self, base_string):
-        # self.base_string = base_string.strip().replace("\\", "").replace("\n", "")
         self.base_string = " ".join(base_string.replace("\\", "").split())
         self.url = ""
         self.method = "get"
@@ -40,14 +39,6 @@ class RequestifyObject(object):
         }
         self.__opt_list = []
         self.__generate()
-
-    def to_file(self, filename, with_headers=True, with_cookies=True):
-        self.__write_to_file(
-            filename, with_headers=with_headers, with_cookies=with_cookies
-        )
-
-    def to_screen(self, with_headers=True, with_cookies=True):
-        self.__write_to_stdio(with_headers, with_cookies)
 
     def __generate(self):
         meta = self.base_string.split(" ", 2)
@@ -91,7 +82,6 @@ class RequestifyObject(object):
 
         assert prefix.strip("'").strip('"') == "curl", "Not a valid cURL request"
         self.url = url.strip("'").strip('"').rstrip("/")
-        # self.url = url.strip("'").strip('"').rstrip("/") + "/"
 
     def __set_opts(self, opts):
         headers = []
@@ -99,24 +89,12 @@ class RequestifyObject(object):
             if k == "-H":
                 headers.append(v)
 
-            # possible_bool = v.split(":")
-            if v.find('false') != -1:
-                v = v.replace('false', "False")
-            elif v.find('true') != -1:
-                v = v.replace('true', "Talse")
-            # v = ":".join(possible_bool)
+            if v.find("false") != -1:
+                v = v.replace("false", "False")
+            elif v.find("true") != -1:
+                v = v.replace("true", "Talse")
 
-            # if len(possible_bool) > 1:
-                ## if the value is not a string, it can be a boolean, integer ...
-                # if not isinstance(possible_bool[1], str):
-                #     possible_bool_as_str = str(v)
-                #     if possible_bool_as_str == "false":
-                #         v.split[""] = False
-                #     elif possible_bool_as_str == "true":
-                #         v.split[""] = True
-
-
-            if k in self.__post_handler and self.method == 'get':
+            if k in self.__post_handler and self.method == "get":
                 self.method = "post"
                 self.data = self.__post_handler[k](v)
 
@@ -130,7 +108,6 @@ class RequestifyObject(object):
                 self.cookies[k] = v
             except ValueError:
                 raise
-                # self.__update_length(k)
         return self.cookies
 
     def __format_headers(self, headers):
@@ -146,11 +123,10 @@ class RequestifyObject(object):
                 self.__format_cookies(v)  # type: ignore
             else:
                 self.headers[k] = v  # type: ignore
-                # self.__update_length(k)
         return self.headers
 
     # returns base(without imports, only the text), unbeautified string
-    def create_responses_base(self, indent="", with_headers=True, with_cookies=True):
+    def __create_responses_base(self, indent="", with_headers=True, with_cookies=True):
         request_options = ""
         wait_to_write = [indent]
         if with_headers:
@@ -175,9 +151,9 @@ class RequestifyObject(object):
         return f"\n".join(wait_to_write)
 
     # returns beautified string
-    def create_beautiful_response(self, with_headers=True, with_cookies=True):
+    def __create_beautiful_response(self, with_headers=True, with_cookies=True):
         request_options = "\t"
-        response = self.create_responses_base("", with_headers, with_cookies)
+        response = self.__create_responses_base("", with_headers, with_cookies)
         wait_to_write = [
             "import requests",
             "\n",
@@ -192,18 +168,26 @@ class RequestifyObject(object):
         return format_str(response, mode=FileMode())
 
     def __write_to_file(self, file, with_headers=True, with_cookies=True):
-        request = self.create_beautiful_response(with_headers, with_cookies)
+        request = self.__create_beautiful_response(with_headers, with_cookies)
         with open(file, "w") as f:
             f.write("\n".join(request) + "\n")
 
     def __write_to_stdio(self, with_headers=True, with_cookies=True):
-        request = self.create_beautiful_response(with_headers, with_cookies)
+        request = self.__create_beautiful_response(with_headers, with_cookies)
         print(request)
+
+    def to_file(self, filename, with_headers=True, with_cookies=True):
+        self.__write_to_file(
+            filename, with_headers=with_headers, with_cookies=with_cookies
+        )
+
+    def to_screen(self, with_headers=True, with_cookies=True):
+        self.__write_to_stdio(with_headers, with_cookies)
 
     def execute(self, with_headers=True, with_cookies=True):
         stdout = io.StringIO()
         with redirect_stdout(stdout):
-            exec(self.create_beautiful_response(with_headers, with_cookies))
+            exec(self.__create_beautiful_response(with_headers, with_cookies))
 
         return stdout.getvalue()
 
@@ -220,7 +204,7 @@ class RequestifyList(object):
             request = RequestifyObject(curl)
             self.requests.append(request)
 
-    def __create_responses_text(self):
+    def __create_responses_text(self, with_headers=True, with_cookies=True):
         requests_text = [
             "import requests",
             "\n\n",
@@ -228,31 +212,30 @@ class RequestifyList(object):
             "\n",
         ]
         function_names = []
+
         for request in self.requests:
             function_name = self.__create_function_name(request)
             function_names.append(function_name)
 
-            response = request.create_responses_base(indent="\t\t")
+            response = request._RequestifyObject__create_responses_base(
+                indent="\t\t", with_headers=with_headers, with_cookies=with_cookies
+            )
             requests_text.append(f"\tdef {function_name}(self):{response}")
-            requests_text.append("\n")
+            # requests_text.append("\n")
 
-        requests_text.append("\n\t")
-        requests_text.append("def call_all(self):")
-        requests_text.append("\n\t\t")
+        requests_text.append("\tdef call_all(self):")
         requests_text.append(
-            "\n\t\t".join(
-                [f"self.{function_name}()" for function_name in function_names]
+            "".join(
+                [f"\t\tself.{function_name}()\n" for function_name in function_names]
             )
         )
 
-        requests_text.append("\n\n")
         requests_text.append("if __name__ == '__main__': ")
-        requests_text.append("\n\t")
-        requests_text.append(f"{REQUESTS_CLASS_NAME}().call_all()")
-        # return "".join(requests_text)
-        return format_str("".join(requests_text), mode=FileMode())
+        requests_text.append(f"\t{REQUESTS_CLASS_NAME}().call_all()")
+        return format_str("\n".join(requests_text), mode=FileMode())
 
     # TODO: test this
+    # TODO: add https:// if not existing
     def __create_function_name(self, request):
         url = re.findall(r"\/+(.*?)\/|\.(.*?)\/", request.url)
         url_regex = re.compile(r"[^0-9a-zA-Z_]+")
@@ -264,7 +247,9 @@ class RequestifyList(object):
             else:
                 url = re.sub(url_regex, "_", url[0][0])
 
-            function_name = f"{url}_{request.method}"
+            # uncomment this for full url name
+            # function_name = f"{url}_{request.method}"
+            function_name = f"{url[0:25]}_{request.method}"
         else:
             function_name = f"{request.method}"
 
@@ -275,12 +260,6 @@ class RequestifyList(object):
         self.existing_function_names[function_name] += 1
         return ret
 
-    def to_file(self, filename):
-        self.__write_to_file(filename)
-
-    def to_screen(self):
-        self.__write_to_stdio()
-
     def __write_to_file(self, file):
         requests_as_functions = self.__create_responses_text()
 
@@ -290,6 +269,12 @@ class RequestifyList(object):
     def __write_to_stdio(self, with_headers=True, with_cookies=True):
         requests_as_functions = self.__create_responses_text()
         print(requests_as_functions)
+
+    def to_file(self, filename):
+        self.__write_to_file(filename)
+
+    def to_screen(self):
+        self.__write_to_stdio()
 
     def execute(self, with_headers=True, with_cookies=True):
         stdout = io.StringIO()
@@ -330,56 +315,3 @@ def from_file(filename):
     else:
         requests = RequestifyList(requests_from_file)
     return requests
-
-
-class UseString(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        from_string(values).to_screen()
-
-
-class UseClipboard(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        from_clipboard().to_screen()
-
-
-class UseFile(argparse.Action):
-    def __call__(self, parser, namespace, filename, option_string=None):
-        from_file(filename).to_screen()
-
-
-class WriteToFile(argparse.Action):
-    def __call__(self, parser, namespace, filename, option_string=None):
-        from_file(filename).to_file(filename)
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Convert cURL to requests.")
-    parser.add_argument(
-        "-s",
-        "--string",
-        nargs="?",
-        action=UseString,
-        help="Use string and write to stdout",
-    )
-    parser.add_argument(
-        "-c",
-        "--clipboard",
-        nargs=0,
-        action=UseClipboard,
-        help="Use clipboard and write to stdout",
-    )
-    parser.add_argument(
-        "-f",
-        "--file",
-        nargs="?",
-        action=UseFile,
-        help="Use cURLs from file",
-    )
-    parser.add_argument(
-        "-o", "--output", action=WriteToFile, help="Write output to file"
-    )
-    return parser.parse_args()
-
-
-if __name__ == "__main__":
-    main()

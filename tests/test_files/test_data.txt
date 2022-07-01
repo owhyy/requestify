@@ -1,0 +1,594 @@
+curl 'https://eurasia-precept-api.devebs.net/users/login' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: content-type' \
+  -H 'Access-Control-Request-Method: POST' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/users/verify' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: en' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-Type: application/json;charset=UTF-8' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --data-raw '{"token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc"}' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/users/verify' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization,content-type' \
+  -H 'Access-Control-Request-Method: POST' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/me' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: en' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/me' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://cloudflareinsights.com/cdn-cgi/rum' \
+  -H 'authority: cloudflareinsights.com' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'content-type: application/json' \
+  -H 'origin: https://eurasia-precept.devebs.net' \
+  -H 'referer: https://eurasia-precept.devebs.net/' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: cross-site' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --data-raw '{"resources":[{"n":"https://cloudflareinsights.com/cdn-cgi/rum","s":3611.5,"d":32.4,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":3611.5,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":3643.9,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://api.ipgeolocation.io/ipgeo?apiKey=12c320fee13d492ea1fd30dc895c29fb","s":3627.8,"d":362,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":3627.8,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":3989.8,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://eurasia-precept-api.devebs.net/countries","s":3628.1,"d":267.8,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":3628.1,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":3895.9,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://eurasia-precept-api.devebs.net/users/login","s":11063.3,"d":873.7,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":11063.3,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":11937,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://eurasia-precept-api.devebs.net/users/verify","s":11964.3,"d":78.7,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":11964.3,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":12043,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://eurasia-precept-api.devebs.net/me","s":12044.8,"d":322,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":12044.8,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":12366.8,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0}],"referrer":"https://eurasia-precept.devebs.net/public","eventType":1,"firstPaint":1443.1999999284744,"firstContentfulPaint":2202.5999999046326,"startTime":1656486516073.4,"versions":{"js":"2021.12.0","timings":1},"pageloadId":"27863376-ed28-4759-a300-fb2ab61c8d12","location":"https://eurasia-precept.devebs.net/public/sign-in","siteToken":"c641019d13c945a6b0b3c8cac39a8f7f","st":2}' \
+  --compressed ;
+curl 'https://api.ipgeolocation.io/ipgeo?apiKey=12c320fee13d492ea1fd30dc895c29fb' \
+  -H 'authority: api.ipgeolocation.io' \
+  -H 'accept: application/json, text/plain, */*' \
+  -H 'accept-language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'origin: https://eurasia-precept.devebs.net' \
+  -H 'referer: https://eurasia-precept.devebs.net/' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: cross-site' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/countries' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: en' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/counts' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: ro' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/events/invitations?filtered=false&page=1&per_page=10&search=&ordering=&start_date__date__gte=&end_date__date__lte=' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: ro' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/me/events?filtered=false&page=1&per_page=10&search=&ordering=&start_date__date__gte=&end_date__date__lte=&end_date__date__gte=2022-06-29' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: ro' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/countries' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/counts' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/events/invitations?filtered=false&page=1&per_page=10&search=&ordering=&start_date__date__gte=&end_date__date__lte=' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/me/events?filtered=false&page=1&per_page=10&search=&ordering=&start_date__date__gte=&end_date__date__lte=&end_date__date__gte=2022-06-29' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://fonts.gstatic.com/s/montserrat/v24/JTUSjIg1_i6t8kCHKm459WdhyyTh89ZNpQ.woff2' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'Referer: https://fonts.googleapis.com/' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/events/invitations?filtered=true&page=1&per_page=10&search=&ordering=&start_date__date__gte=&end_date__date__lte=' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: ro' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/me/events?filtered=true&page=1&per_page=10&search=&ordering=&start_date__date__gte=&end_date__date__lte=&end_date__date__gte=2022-06-29' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: ro' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/events/invitations?filtered=true&page=1&per_page=10&search=&ordering=&start_date__date__gte=&end_date__date__lte=' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/me/events?filtered=true&page=1&per_page=10&search=&ordering=&start_date__date__gte=&end_date__date__lte=&end_date__date__gte=2022-06-29' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://cloudflareinsights.com/cdn-cgi/rum' \
+  -H 'authority: cloudflareinsights.com' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'content-type: application/json' \
+  -H 'origin: https://eurasia-precept.devebs.net' \
+  -H 'referer: https://eurasia-precept.devebs.net/' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: cross-site' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --data-raw '{"resources":[{"n":"https://cloudflareinsights.com/cdn-cgi/rum","s":12373,"d":58.2,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":12373,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":12431.2,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://api.ipgeolocation.io/ipgeo?apiKey=12c320fee13d492ea1fd30dc895c29fb","s":12395.8,"d":70.5,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":12395.8,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":12466.3,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://eurasia-precept-api.devebs.net/countries","s":12396,"d":952.5,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":12396,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":13348.5,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://eurasia-precept-api.devebs.net/counts","s":12396.2,"d":316.5,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":12396.2,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":12712.7,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://eurasia-precept-api.devebs.net/events/invitations?filtered=false&page=1&per_page=10&search=&ordering=&start_date__date__gte=&end_date__date__lte=","s":12396.3,"d":435.2,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":12396.3,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":12831.5,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://eurasia-precept-api.devebs.net/me/events?filtered=false&page=1&per_page=10&search=&ordering=&start_date__date__gte=&end_date__date__lte=&end_date__date__gte=2022-06-29","s":12396.4,"d":526,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":12396.4,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":12922.4,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://fonts.gstatic.com/s/montserrat/v24/JTUSjIg1_i6t8kCHKm459WdhyyTh89ZNpQ.woff2","s":12399.1,"d":5,"i":"css","p":"h3","rs":0,"re":0,"fs":12399.1,"ds":12399.1,"de":12399.1,"cs":12399.1,"ce":12399.1,"qs":12402.5,"ps":12403.1,"pe":12404.1,"ws":0,"ss":12399.1,"ts":0,"ec":25068,"dc":25068},{"n":"https://eurasia-precept-api.devebs.net/events/invitations?filtered=true&page=1&per_page=10&search=&ordering=&start_date__date__gte=&end_date__date__lte=","s":12430.5,"d":481.7,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":12430.5,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":12912.2,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://eurasia-precept-api.devebs.net/me/events?filtered=true&page=1&per_page=10&search=&ordering=&start_date__date__gte=&end_date__date__lte=&end_date__date__gte=2022-06-29","s":12430.7,"d":585.3,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":12430.7,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":13016,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0}],"referrer":"https://eurasia-precept.devebs.net/public/sign-in","eventType":1,"firstPaint":1443.1999999284744,"firstContentfulPaint":2202.5999999046326,"startTime":1656486516073.4,"versions":{"js":"2021.12.0","timings":1},"pageloadId":"3bd619de-fe93-420d-a99e-85d307b999ba","location":"https://eurasia-precept.devebs.net/events","siteToken":"c641019d13c945a6b0b3c8cac39a8f7f","st":2}' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/faculties?filtered=false&page=1&search=&per_page=10&ordering=' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: ro' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/faculties?filtered=false&page=1&search=&per_page=10&ordering=' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://cloudflareinsights.com/cdn-cgi/rum' \
+  -H 'authority: cloudflareinsights.com' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'content-type: application/json' \
+  -H 'origin: https://eurasia-precept.devebs.net' \
+  -H 'referer: https://eurasia-precept.devebs.net/' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: cross-site' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --data-raw '{"resources":[{"n":"https://cloudflareinsights.com/cdn-cgi/rum","s":16746.1,"d":128,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":16746.1,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":16874.1,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://eurasia-precept-api.devebs.net/faculties?filtered=false&page=1&search=&per_page=10&ordering=","s":16793.9,"d":279.4,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":16793.9,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":17073.3,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0}],"referrer":"https://eurasia-precept.devebs.net/events","eventType":1,"firstPaint":1443.1999999284744,"firstContentfulPaint":2202.5999999046326,"startTime":1656486516073.4,"versions":{"js":"2021.12.0","timings":1},"pageloadId":"6ef39caa-84d1-4443-b44f-e172a72b5635","location":"https://eurasia-precept.devebs.net/faculties","siteToken":"c641019d13c945a6b0b3c8cac39a8f7f","st":2}' \
+  --compressed ;
+curl 'https://fonts.gstatic.com/s/montserrat/v24/JTUSjIg1_i6t8kCHKm459W1hyyTh89ZNpQ.woff2' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'Referer: https://fonts.googleapis.com/' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/courses/list' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: ro' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/faculties/1' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: ro' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/courses/list' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/faculties/1' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/faculties/1' \
+  -X 'PATCH' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: ro' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-Type: application/json;charset=UTF-8' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --data-raw '{"name_ro":"Nivelul 1","name_ru":"1 Курс","name_en":"Level 1","name_es":"Nivel 1","courses":[3,6,7,21,2,5],"search":"","dragStart":false}' \
+  --compressed ;
+curl 'https://cloudflareinsights.com/cdn-cgi/rum' \
+  -H 'authority: cloudflareinsights.com' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'content-type: application/json' \
+  -H 'origin: https://eurasia-precept.devebs.net' \
+  -H 'referer: https://eurasia-precept.devebs.net/' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: cross-site' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --data-raw '{"resources":[{"n":"https://cloudflareinsights.com/cdn-cgi/rum","s":21913.7,"d":86.9,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":21913.7,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":22000.6,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://fonts.gstatic.com/s/montserrat/v24/JTUSjIg1_i6t8kCHKm459W1hyyTh89ZNpQ.woff2","s":21976.3,"d":7.3,"i":"css","p":"h3","rs":0,"re":0,"fs":21976.3,"ds":21976.3,"de":21976.3,"cs":21976.3,"ce":21976.3,"qs":21978.8,"ps":21980.1,"pe":21983.6,"ws":0,"ss":21976.3,"ts":0,"ec":20548,"dc":20548},{"n":"https://eurasia-precept-api.devebs.net/courses/list","s":21988.1,"d":231.1,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":21988.1,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":22219.2,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://eurasia-precept-api.devebs.net/faculties/1","s":21988.4,"d":233.5,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":21988.4,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":22221.9,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://eurasia-precept-api.devebs.net/faculties/1","s":34115.1,"d":307.6,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":34115.1,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":34422.7,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0}],"referrer":"https://eurasia-precept.devebs.net/faculties","eventType":1,"firstPaint":1443.1999999284744,"firstContentfulPaint":2202.5999999046326,"startTime":1656486516073.4,"versions":{"js":"2021.12.0","timings":1},"pageloadId":"27b5aa99-30ec-459c-8968-97ed58b205ba","location":"https://eurasia-precept.devebs.net/faculty/management/1","siteToken":"c641019d13c945a6b0b3c8cac39a8f7f","st":2}' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/faculties?filtered=false&page=1&search=&per_page=10&ordering=' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: ro' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://cloudflareinsights.com/cdn-cgi/rum' \
+  -H 'authority: cloudflareinsights.com' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'content-type: application/json' \
+  -H 'origin: https://eurasia-precept.devebs.net' \
+  -H 'referer: https://eurasia-precept.devebs.net/' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: cross-site' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --data-raw '{"resources":[{"n":"https://cloudflareinsights.com/cdn-cgi/rum","s":34436.6,"d":83.4,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":34436.6,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":34520,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0},{"n":"https://eurasia-precept-api.devebs.net/faculties?filtered=false&page=1&search=&per_page=10&ordering=","s":34510.2,"d":231.8,"i":"xmlhttprequest","p":"","rs":0,"re":0,"fs":34510.2,"ds":0,"de":0,"cs":0,"ce":0,"qs":0,"ps":0,"pe":34742,"ws":0,"ss":0,"ts":0,"ec":0,"dc":0}],"referrer":"https://eurasia-precept.devebs.net/faculty/management/1","eventType":1,"firstPaint":1443.1999999284744,"firstContentfulPaint":2202.5999999046326,"startTime":1656486516073.4,"versions":{"js":"2021.12.0","timings":1},"pageloadId":"f366c613-d3a7-43a4-bed6-ef61f7e9b8e7","location":"https://eurasia-precept.devebs.net/faculties","siteToken":"c641019d13c945a6b0b3c8cac39a8f7f","st":2}' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/me/sessions?filtered=false&page=1&per_page=10&search=&start_date__date__gte=&end_date__date__lte=&ordering=&type=planned' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/sessions/requests/count' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/me/sessions?filtered=false&page=1&per_page=10&search=&start_date__date__gte=&end_date__date__lte=&ordering=&type=planned' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: ro' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/sessions/requests/count' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: ro' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/me/sessions?filtered=true&page=1&per_page=10&search=&start_date__date__gte=&end_date__date__lte=&ordering=&type=planned' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: ro' \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/me/sessions?filtered=true&page=1&per_page=10&search=&start_date__date__gte=&end_date__date__lte=&ordering=&type=planned' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/me/sessions/export?status=&type=planned&start_date__date__gte=&end_date__date__lte=' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NjU5MzI4LCJqdGkiOiI0ODkxZWZhODExYWE0OTg3OWI1Mzk4NzBlNWUxNGVjOSIsInVzZXJfaWQiOjI1MDY4fQ.X2WwnS4RjdGftbyyKSwkUJxnNG_2Xt17_3vxa6HaQEc' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --compressed ;
+curl 'https://eurasia-precept-api.devebs.net/me/sessions/export?status=&type=planned&start_date__date__gte=&end_date__date__lte=' \
+  -X 'OPTIONS' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+  -H 'Access-Control-Request-Headers: authorization' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: https://eurasia-precept.devebs.net' \
+  -H 'Referer: https://eurasia-precept.devebs.net/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
+  --compressed
