@@ -15,13 +15,21 @@ from contextlib import redirect_stdout
 
 # name that will be used for class with requests
 REQUESTS_CLASS_NAME = "RequestsTest"
-REQUEST_VARIABLE_NAME = "RequestsTest"
+RESPONSE_VARIABLE_NAME = "response"
 
 
 def get_data_dict(query):
     data = dict(parse.parse_qsl(query))
-    alt = query if query.startswith("'") else json.loads(query.replace( "'", '"').strip('"'))
+    alt = (
+        query
+        if query.startswith("'")
+        else json.loads(query.replace("'", '"').strip('"'))
+    )
     return data if data else alt
+
+
+def beautify_string(string):
+    return format_str(string, mode=FileMode())
 
 
 class RequestifyObject(object):
@@ -41,7 +49,7 @@ class RequestifyObject(object):
             "--data-urlencode": lambda x: parse.quote(x),
         }
         self.__opt_list = []
-        self.existing_function_names = defaultdict(int)
+        self.function_name = ""
         self.__generate()
 
     def __generate(self):
@@ -85,7 +93,7 @@ class RequestifyObject(object):
             )
             self.method = method.strip("'").strip('"').lower()
 
-            #TODO: find a better method(maybe replace all ' with " or vice-versa)
+            # TODO: find a better method(maybe replace all ' with " or vice-versa)
             single_quoted = []
             double_quoted = []
 
@@ -141,6 +149,29 @@ class RequestifyObject(object):
                 self.headers[k] = v  # type: ignore
         return self.headers
 
+    # TODO: test this
+    def create_function_name(self, increase_count=True):
+        # TODO: regex only matches urls with ending in/ fix this !!!
+        url = re.findall(r"\/+(.*?)\/|\.(.*?)\/", self.url)
+        url_regex = re.compile(r"[^0-9a-zA-Z_]+")
+        # TODO: finish this
+        if url:
+            # if is //url.com/
+            if url[0][0]:
+                url = re.sub(url_regex, "_", url[0][0])
+            # if is www.url.com/
+            else:
+                pass
+
+            # uncomment this for full url name
+            # function_name = f"{self.method}_{url}"
+            function_name = f"{self.method}_{url[0:25]}"
+
+        else:
+            # throw exception here
+            function_name = f"{self.method}"
+        return function_name
+
     # returns base(without imports, only the text), unbeautified string
     def create_responses_base(self, indent="", with_headers=True, with_cookies=True):
         request_options = ""
@@ -158,7 +189,7 @@ class RequestifyObject(object):
             request_options += ", data=data"
 
         wait_to_write.append(
-            f"{indent}response = {REQUEST_VARIABLE_NAME}.{self.method}('{self.url}'"
+            f"{indent}{RESPONSE_VARIABLE_NAME} = requests.{self.method}('{self.url}'"
             + request_options
             + ")"
         )
@@ -177,36 +208,7 @@ class RequestifyObject(object):
             "\n\n",
         ]
 
-        return self.__beautify_string("".join(wait_to_write))
-
-    @staticmethod
-    def __beautify_string(response):
-        return format_str(response, mode=FileMode())
-
-    # TODO: test this
-    def create_function_name(self):
-        url = re.findall(r"\/+(.*?)\/|\.(.*?)\/", self.url)
-        url_regex = re.compile(r"[^0-9a-zA-Z_]+")
-        if url:
-            # if is //url.com/
-            if url[0][0]:
-                url = re.sub(url_regex, "_", url[0][0])
-            # if is www.url.com/
-            else:
-                url = re.sub(url_regex, "_", url[0][0])
-
-            # uncomment this for full url name
-            # function_name = f"{url}_{self.method}"
-            function_name = f"{url[0:25]}_{self.method}"
-        else:
-            function_name = f"{self.method}"
-
-        function_count = self.existing_function_names[function_name]
-
-        ret = f"{function_name}{'_' + str(function_count) if function_count else ''}"
-
-        self.existing_function_names[function_name] += 1
-        return ret
+        return beautify_string("".join(wait_to_write))
 
     def __write_to_file(self, file, with_headers=True, with_cookies=True):
         request = self.create_beautiful_response(with_headers, with_cookies)
@@ -242,6 +244,7 @@ class RequestifyList(object):
         self.base_list = base_list
         self.requests = []
         self.__generate()
+        self.existing_function_names = defaultdict(int)
 
     def __generate(self):
         for curl in self.base_list:
@@ -251,21 +254,18 @@ class RequestifyList(object):
     def __create_responses_text(self, with_headers=True, with_cookies=True):
         requests_text = [
             "import requests",
-            "\n\n",
-            f"class {REQUESTS_CLASS_NAME}():",
-            "\n",
+            f"class {REQUESTS_CLASS_NAME}:",
         ]
         function_names = []
 
         for request in self.requests:
-            function_name = request.create_function_name()
+            function_name = self.create_function_name(request)
             function_names.append(function_name)
 
             response = request.create_responses_base(
                 indent="\t\t", with_headers=with_headers, with_cookies=with_cookies
             )
             requests_text.append(f"\tdef {function_name}(self):{response}")
-            # requests_text.append("\n")
 
         requests_text.append("\tdef call_all(self):")
         requests_text.append(
@@ -276,7 +276,17 @@ class RequestifyList(object):
 
         requests_text.append("if __name__ == '__main__': ")
         requests_text.append(f"\t{REQUESTS_CLASS_NAME}().call_all()")
-        return format_str("\n".join(requests_text), mode=FileMode())
+
+        return beautify_string("\n".join(requests_text))
+
+    def create_function_name(self, request):
+        function_name = request.create_function_name()
+        function_count = self.existing_function_names[function_name]
+
+        ret = f"{function_name}{'_' + str(function_count) if function_count else ''}"
+        self.existing_function_names[function_name] += 1
+
+        return ret
 
     def __write_to_file(self, file):
         requests_as_functions = self.__create_responses_text()

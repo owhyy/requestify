@@ -1,7 +1,7 @@
 from requestify import (
     RequestifyList,
     REQUESTS_CLASS_NAME,
-    REQUEST_VARIABLE_NAME,
+    RESPONSE_VARIABLE_NAME,
     __get_file,
     RequestifyObject,
 )
@@ -9,16 +9,6 @@ from black import format_str, FileMode
 import json
 
 RESPONSES_DICT_NAME = "workflow"
-RESPONSE_VARIABLE_NAME = "response"
-
-
-# class ReplaceRequestifyObjecet(RequestifyObject):
-#     def __create_responses_base(self, indent="", with_headers=True, with_cookies=True):
-#         if self.data:
-#             pass
-#         else:
-#             .__create_responses_base(indent=indent,with_headers=with_headers, with_cookies=with_cookies)
-
 
 class ReplaceRequestify(RequestifyList):
     def __init__(self, base_list):
@@ -27,30 +17,42 @@ class ReplaceRequestify(RequestifyList):
         self.methods_called = []
         self.generate_workflow()
 
+    """
+    Generates a dict containing the name of the called function and the result of calling it
+    """
     def generate_workflow(self):
-        for request in self.requests:
-            self.workflow[request.create_function_name()] = request.execute()
+        assert len(self.requests) > 1, "There must be at least one request"
 
-    def match_data(self, request):
-        # for every value in the request's data
+        request = self.requests[0]
+        response = request.execute()
+
+        self.workflow[request.function_name] = response if not isinstance(response, str) else None
+
+        for request in self.requests[1:]:
+            self.replace_data(request)
+            response = request.execute()
+            # only add json responses
+            self.workflow[request.function_name] = response if not isinstance(response, str) else None
+
+    def search_in_list(self, value, list_of_dicts):
+        for dict in list_of_dicts:
+            if value in dict.values():
+                return dict
+
+    def replace_data(self, request):
+        data = None
         for value in list(request.data.values()):
-            # for every response returned before
-            for function_name, w_dict in self.workflow.items():
-                # for every value of this actual response
-                for w_value in list(w_dict.values()):
-                    # if the request data's value matches the response's values
-                    if value == w_value:
-                        # set the request's data body to the request returned
-                        request.data = w_dict.items()
-                        self.methods_called.append(function_name)
-                        break
-                # so it breaks of all the fors
-                else:
-                    continue
+            # stop the first time you match anything
+            if data:
                 break
-            else:
-                continue
-            break
+            for function_name, returned_data in self.workflow.items():
+                if isinstance(returned_data, list):
+                    data = self.search_in_list(value, returned_data)
+                elif isinstance(returned_data, dict):
+                    if value in returned_data.values():
+                        data = returned_data
+
+        request.data = data
 
     def create_responses_text(self, with_headers=True, with_cookies=True):
         requests_text = [
@@ -58,27 +60,25 @@ class ReplaceRequestify(RequestifyList):
             "\n\n",
             f"class {REQUESTS_CLASS_NAME}():",
             "\n",
-            f"\t{RESPONSES_DICT_NAME} = dict()" "\n",
+            f"\t{RESPONSES_DICT_NAME} = {self.workflow}" "\n",
         ]
         function_names = []
 
         for request in self.requests:
-            function_name = request.create_function_name()
+            function_name = RequestifyList.create_function_name(request) # this is not working
             function_names.append(function_name)
-
-            self.match_data(request)
 
             response = request.create_responses_base(
                 indent="\t\t", with_headers=with_headers, with_cookies=with_cookies
             )
 
             requests_text.append(f"\tdef {function_name}(self):{response}")
-            requests_text.append(
-                f"\t\t{RESPONSE_VARIABLE_NAME}={REQUEST_VARIABLE_NAME}.text"
-            )
-            requests_text.append(
-                f"\t\tself.{RESPONSES_DICT_NAME}['{function_name}']={RESPONSE_VARIABLE_NAME}"
-            )
+            # requests_text.append(
+            #     f"\t\t{RESPONSE_VARIABLE_NAME}={REQUEST_VARIABLE_NAME}.text"
+            # )
+            # requests_text.append(
+            #     f"\t\tself.{RESPONSES_DICT_NAME}['{function_name}']={RESPONSE_VARIABLE_NAME}"
+            # )
 
             # requests_text.append("\n")
 
@@ -91,10 +91,7 @@ class ReplaceRequestify(RequestifyList):
 
         requests_text.append("if __name__ == '__main__': ")
         requests_text.append(f"\t{REQUESTS_CLASS_NAME}().call_all()")
-        # return format_str("\n".join(requests_text), mode=FileMode())
-        return "\n".join(requests_text)
-
-    # def get_result(self, request):
+        return RequestifyObject.beautify_string("\n".join(requests_text))
 
     def __write_to_stdio(self, with_headers=True, with_cookies=True):
         requests_as_functions = self.create_responses_text(
