@@ -66,5 +66,14 @@ def main():
 
 if __name__ == "__main__":
     # main()
-    replace.from_file('../tests/test_files/test_data.txt').create_responses_text()
+    # import cProfile
+    # import pstats
+    # with cProfile.Profile() as pr:
+        # replace.from_file('../tests/test_files/test_data.txt').generate_workflow()
+        # replace.from_file('../tests/test_files/test_data.txt').generate_workflow_async()
+    print(replace.from_file('../tests/test_files/test_data.txt').create_responses_text())
+
+    # stats = pstats.Stats(pr)
+    # stats.sort_stats(pstats.SortKey.TIME)
+    # stats.print_stats()
 

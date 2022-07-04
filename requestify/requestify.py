@@ -3,11 +3,13 @@
 import os
 import io
 import re
+import asyncio
 import sys
 import argparse
 import pyperclip
 import json
 import requests
+from httpx import AsyncClient
 from collections import defaultdict
 from urllib import parse, request
 from black import format_str, FileMode
@@ -16,6 +18,8 @@ from contextlib import redirect_stdout
 # name that will be used for class with requests
 REQUESTS_CLASS_NAME = "RequestsTest"
 RESPONSE_VARIABLE_NAME = "response"
+REQUEST_VARIABLE_NAME = "request"
+OPTS_REGEX = re.compile(""" (-{1,2}\S+)\s+?"([\S\s]+?)"|(-{1,2}\S+)\s+?'([\S\s]+?)'""")
 
 
 def get_data_dict(query):
@@ -30,6 +34,23 @@ def get_data_dict(query):
 
 def beautify_string(string):
     return format_str(string, mode=FileMode())
+
+
+def get_netloc(url):
+    url_parts = parse.urlparse(url)
+    url_regex = re.compile(r"[^0-9a-zA-Z_]+")
+
+    if url_parts:
+        netloc = url_parts.netloc
+        if netloc:
+            clean_netloc = re.sub(url_regex, "_", netloc)
+        else:
+            raise ValueError("Not a valid netloc")
+
+    else:
+        raise ValueError("Not a valid url")
+
+    return clean_netloc
 
 
 class RequestifyObject(object):
@@ -65,7 +86,6 @@ class RequestifyObject(object):
 
             # if request is like curl -X GET url -H headers, flag will be second, not url
             if url_or_flag == "-X":  # TODO: replace with better check (more flags)
-                # flag = "-X" maybe we'll need different flags
                 method_and_url = opts_string.split(" ", 2)
                 assert len(method_and_url) > 1, "Not a valid cURL request"
 
@@ -104,7 +124,17 @@ class RequestifyObject(object):
             self.__set_opts(single_quoted if single_quoted else double_quoted)
 
         assert prefix.strip("'").strip('"') == "curl", "Not a valid cURL request"
-        self.url = url.strip("'").strip('"').rstrip("/")
+
+        url = url.strip("'").strip('"').rstrip("/")
+        if not (
+            url.startswith("//")
+            or url.startswith("http://")
+            or url.startswith("https://")
+        ):
+            url = "https://" + url  # good enough
+
+        self.url = url
+        self.__set_function_name()
 
     def __set_opts(self, opts):
         headers = []
@@ -149,30 +179,13 @@ class RequestifyObject(object):
                 self.headers[k] = v  # type: ignore
         return self.headers
 
-    # TODO: test this
-    def create_function_name(self, increase_count=True):
-        # TODO: regex only matches urls with ending in/ fix this !!!
-        url = re.findall(r"\/+(.*?)\/|\.(.*?)\/", self.url)
-        url_regex = re.compile(r"[^0-9a-zA-Z_]+")
-        # TODO: finish this
-        if url:
-            # if is //url.com/
-            if url[0][0]:
-                url = re.sub(url_regex, "_", url[0][0])
-            # if is www.url.com/
-            else:
-                pass
+    def __set_function_name(self):
+        netloc = get_netloc(self.url)
+        function_name = f"{self.method}_{netloc}"
 
-            # uncomment this for full url name
-            # function_name = f"{self.method}_{url}"
-            function_name = f"{self.method}_{url[0:25]}"
+        self.function_name = function_name
 
-        else:
-            # throw exception here
-            function_name = f"{self.method}"
-        return function_name
-
-    # returns base(without imports, only the text), unbeautified string
+    # returns base as list(without imports, only the text), unbeautified string
     def create_responses_base(self, indent="", with_headers=True, with_cookies=True):
         request_options = ""
         wait_to_write = [indent]
@@ -189,18 +202,17 @@ class RequestifyObject(object):
             request_options += ", data=data"
 
         wait_to_write.append(
-            f"{indent}{RESPONSE_VARIABLE_NAME} = requests.{self.method}('{self.url}'"
+            f"{indent}{REQUEST_VARIABLE_NAME} = requests.{self.method}('{self.url}'"
             + request_options
             + ")"
         )
 
-        wait_to_write.append(f"{indent}print(response.text)")
-        return f"\n".join(wait_to_write)
+        return wait_to_write
 
     # returns beautified string
     def create_beautiful_response(self, with_headers=True, with_cookies=True):
         request_options = "\t"
-        response = self.create_responses_base("", with_headers, with_cookies)
+        response = "\n".join(self.create_responses_base("", with_headers, with_cookies))
         wait_to_write = [
             "import requests",
             "\n",
@@ -243,34 +255,37 @@ class RequestifyList(object):
     def __init__(self, base_list):
         self.base_list = base_list
         self.requests = []
-        self.__generate()
         self.existing_function_names = defaultdict(int)
+        self.__generate()
 
     def __generate(self):
         for curl in self.base_list:
             request = RequestifyObject(curl)
             self.requests.append(request)
 
+        self.__set_function_names()
+
     def __create_responses_text(self, with_headers=True, with_cookies=True):
         requests_text = [
             "import requests",
             f"class {REQUESTS_CLASS_NAME}:",
         ]
-        function_names = []
 
         for request in self.requests:
-            function_name = self.create_function_name(request)
-            function_names.append(function_name)
-
-            response = request.create_responses_base(
-                indent="\t\t", with_headers=with_headers, with_cookies=with_cookies
+            response = "\n".join(
+                request.create_responses_base(
+                    indent="\t\t", with_headers=with_headers, with_cookies=with_cookies
+                )
             )
-            requests_text.append(f"\tdef {function_name}(self):{response}")
+            requests_text.append(f"\tdef {request.function_name}(self):{response}")
 
         requests_text.append("\tdef call_all(self):")
         requests_text.append(
             "".join(
-                [f"\t\tself.{function_name}()\n" for function_name in function_names]
+                [
+                    f"\t\tself.{function_name}()\n"
+                    for function_name in self.existing_function_names
+                ]
             )
         )
 
@@ -279,14 +294,14 @@ class RequestifyList(object):
 
         return beautify_string("\n".join(requests_text))
 
-    def create_function_name(self, request):
-        function_name = request.create_function_name()
-        function_count = self.existing_function_names[function_name]
-
-        ret = f"{function_name}{'_' + str(function_count) if function_count else ''}"
-        self.existing_function_names[function_name] += 1
-
-        return ret
+    def __set_function_names(self):
+        for request in self.requests:
+            function_count = self.existing_function_names[request.function_name]
+            function_name = f"{request.function_name}{('_' + str(function_count) if function_count else '')}"
+            request.function_name = (
+                function_name if function_name else request.function_name
+            )
+            self.existing_function_names[function_name] += 1
 
     def __write_to_file(self, file):
         requests_as_functions = self.__create_responses_text()
@@ -311,6 +326,28 @@ class RequestifyList(object):
 
         return ret
 
+    async def execute_async(self, with_headers=True, with_cookies=True):
+        ret = []
+        async with AsyncClient() as client:
+            tasks = (
+                client.request(
+                    method=request.method,
+                    url=request.url,
+                    headers=request.headers,
+                    cookies=request.cookies,
+                )
+                for request in self.requests
+            )
+            responses = await asyncio.gather(*tasks)
+
+        for res in responses:
+            try:
+                ret.append(res.json())
+            except json.JSONDecodeError:
+                ret.append(res.text)
+
+        return ret
+
 
 def __get_file(filename):
     requests = []
@@ -318,7 +355,7 @@ def __get_file(filename):
     with open(filename, mode="r") as in_file:
         for line in in_file:
             request += line
-            if re.findall("curl", line):
+            if "curl" in line:
                 requests.append(request)
                 request = ""
     return requests
