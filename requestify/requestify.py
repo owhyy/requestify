@@ -1,56 +1,21 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os
-import io
 import re
 import asyncio
-import sys
-import argparse
 import pyperclip
 import json
 import requests
+from urllib import parse
 from httpx import AsyncClient
 from collections import defaultdict
-from urllib import parse, request
-from black import format_str, FileMode
-from contextlib import redirect_stdout
+from utils import get_data_dict, get_netloc, beautify_string
+
 
 # name that will be used for class with requests
 REQUESTS_CLASS_NAME = "RequestsTest"
 RESPONSE_VARIABLE_NAME = "response"
 REQUEST_VARIABLE_NAME = "request"
 OPTS_REGEX = re.compile(""" (-{1,2}\S+)\s+?"([\S\s]+?)"|(-{1,2}\S+)\s+?'([\S\s]+?)'""")
-
-
-def get_data_dict(query):
-    data = dict(parse.parse_qsl(query))
-    alt = (
-        query
-        if query.startswith("'")
-        else json.loads(query.replace("'", '"').strip('"'))
-    )
-    return data if data else alt
-
-
-def beautify_string(string):
-    return format_str(string, mode=FileMode())
-
-
-def get_netloc(url):
-    url_parts = parse.urlparse(url)
-    url_regex = re.compile(r"[^0-9a-zA-Z_]+")
-
-    if url_parts:
-        netloc = url_parts.netloc
-        if netloc:
-            clean_netloc = re.sub(url_regex, "_", netloc)
-        else:
-            raise ValueError("Not a valid netloc")
-
-    else:
-        raise ValueError("Not a valid url")
-
-    return clean_netloc
 
 
 class RequestifyObject(object):
