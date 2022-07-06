@@ -2,13 +2,12 @@
 # -*- coding: utf-8 -*-
 import re
 import asyncio
-import pyperclip
 import json
 import requests
 from urllib import parse
 from httpx import AsyncClient
 from collections import defaultdict
-from utils import get_data_dict, get_netloc, beautify_string
+from utils import get_data_dict, get_netloc, beautify_string, get_json_or_text
 
 
 # name that will be used for class with requests
@@ -34,7 +33,6 @@ class RequestifyObject(object):
             "--data-raw": lambda x: get_data_dict(x),
             "--data-urlencode": lambda x: parse.quote(x),
         }
-        self.__opt_list = []
         self.function_name = ""
         self.__generate()
 
@@ -174,18 +172,14 @@ class RequestifyObject(object):
 
         return wait_to_write
 
-    # returns beautified string
     def create_beautiful_response(self, with_headers=True, with_cookies=True):
-        request_options = "\t"
         response = "\n".join(self.create_responses_base("", with_headers, with_cookies))
         wait_to_write = [
             "import requests",
-            "\n",
             response,
-            "\n\n",
         ]
 
-        return beautify_string("".join(wait_to_write))
+        return beautify_string("\n".join(wait_to_write))
 
     def __write_to_file(self, file, with_headers=True, with_cookies=True):
         request = self.create_beautiful_response(with_headers, with_cookies)
@@ -208,12 +202,8 @@ class RequestifyObject(object):
         request = requests.request(
             method=self.method, url=self.url, headers=self.headers, cookies=self.cookies
         )
-        try:
-            ret = request.json()
-        except json.JSONDecodeError:
-            ret = request.text
 
-        return ret
+        return get_json_or_text(request)
 
 
 class RequestifyList(object):
@@ -275,7 +265,7 @@ class RequestifyList(object):
             f.write("\n".join(requests_as_functions) + "\n")
 
     def __write_to_stdio(self, with_headers=True, with_cookies=True):
-        requests_as_functions = self.__create_responses_text()
+        requests_as_functions = self.__create_responses_text(with_headers, with_cookies)
         print(requests_as_functions)
 
     def to_file(self, filename):
@@ -284,15 +274,16 @@ class RequestifyList(object):
     def to_screen(self):
         self.__write_to_stdio()
 
-    def execute(self, with_headers=True, with_cookies=True):
+    def execute(self):
         ret = []
         for request in self.requests:
             ret.append(request.execute())
 
         return ret
 
-    async def execute_async(self, with_headers=True, with_cookies=True):
+    async def execute_async(self):
         ret = []
+
         async with AsyncClient() as client:
             tasks = (
                 client.request(
@@ -305,44 +296,8 @@ class RequestifyList(object):
             )
             responses = await asyncio.gather(*tasks)
 
-        for res in responses:
-            try:
-                ret.append(res.json())
-            except json.JSONDecodeError:
-                ret.append(res.text)
+        for response in responses:
+            responses_text = get_json_or_text(response)
+            ret.append(responses_text)
 
         return ret
-
-
-def __get_file(filename):
-    requests = []
-    request = ""
-    with open(filename, mode="r") as in_file:
-        for line in in_file:
-            request += line
-            if "curl" in line:
-                requests.append(request)
-                request = ""
-    return requests
-
-
-def __get_clipboard():
-    return pyperclip.paste()
-
-
-def from_string(base_string):
-    return RequestifyObject(base_string)
-
-
-def from_clipboard():
-    return RequestifyObject(__get_clipboard())
-
-
-def from_file(filename):
-    requests_from_file = __get_file(filename)
-    assert requests_from_file, "No data in the specified file"
-    if len(requests_from_file) == 1:
-        requests = RequestifyObject(requests_from_file[0])
-    else:
-        requests = RequestifyList(requests_from_file)
-    return requests

@@ -14,10 +14,23 @@ def get_json_or_text(request):
     except json.JSONDecodeError:
         response = request.text
 
+    return response
 
-async def get_responses_async(requestify_list):
-    responses = []
 
+async def __get_response_async(requestify_object):
+    async with AsyncClient() as client:
+        response = await client.request(
+            method=requestify_object.method,
+            url=requestify_object.url,
+            data=requestify_object.data,
+            headers=requestify_object.headers,
+            cookies=requestify_object.cookies,
+        )
+
+    return response
+
+
+async def __get_responses_async(requestify_list):
     async with AsyncClient() as client:
         request = (
             client.request(
@@ -28,17 +41,12 @@ async def get_responses_async(requestify_list):
             )
             for requestify_object in requestify_list
         )
-
-        requests = await asyncio.gather(*request)
-
-    for request in requests:
-        response = get_json_or_text(request)
-        responses.append(response)
+        responses = await asyncio.gather(*request)
 
     return responses
 
 
-def get_response(requestify_object):
+def __get_response_requests(requestify_object):
     request = requests.request(
         method=requestify_object.method,
         url=requestify_object.url,
@@ -47,11 +55,34 @@ def get_response(requestify_object):
         cookies=requestify_object.cookies,
     )
 
-    return get_json_or_text(request)
+    return request
+
+
+def __get_responses_requests(requestify_list):
+    return [
+        __get_response_requests(requestify_object)
+        for requestify_object in requestify_list
+    ]
+
+
+def get_response(requestify_object):
+    try:
+        response = asyncio.run(__get_response_async(requestify_object))
+    except TimeoutError:
+        print("Async call failed. Using synchronous requests instead")
+        response = __get_response_requests(requestify_object)
+
+    return get_json_or_text(response)
 
 
 def get_responses(requestify_list):
-    return [get_response(requestify_object) for requestify_object in requestify_list]
+    try:
+        responses = asyncio.run(__get_responses_async(requestify_list))
+    except TimeoutError:
+        print("Async call failed. Using synchronous requests instead")
+        responses = __get_responses_requests(requestify_list)
+
+    return [get_json_or_text(response) for response in responses]
 
 
 def get_data_dict(query):
@@ -85,3 +116,7 @@ def get_netloc(url):
 
     else:
         raise ValueError("Not a valid url")
+
+
+def is_valid_response(response):
+    return isinstance(response, dict) or isinstance(response, list)

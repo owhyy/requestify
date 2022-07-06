@@ -1,9 +1,42 @@
 import argparse
+import pyperclip
 import sys
-import requestify
+from requestify import RequestifyList, RequestifyObject
+from replace import ReplaceRequestify
 import replace
-# from . import requestify
-# from . import replace
+
+
+def __get_file(filename):
+    requests = []
+    request = ""
+    with open(filename, mode="r") as in_file:
+        for line in in_file:
+            request += line
+            if "curl" in line:
+                requests.append(request)
+                request = ""
+    return requests
+
+
+def from_string(base_string):
+    return RequestifyObject(base_string)
+
+
+def from_clipboard():
+    return RequestifyObject(pyperclip.paste())
+
+
+def from_file(filename, replace=False):
+    requests_from_file = __get_file(filename)
+    assert requests_from_file, "No data in the specified file"
+    if len(requests_from_file) == 1:
+        requests = RequestifyObject(requests_from_file[0])
+    else:
+        if replace:
+            requests = ReplaceRequestify(requests_from_file)
+        else:
+            requests = RequestifyList(requests_from_file)
+    return requests
 
 
 def get_args():
@@ -41,22 +74,22 @@ def parse_args(parser):
         sys.exit(1)
 
     if args.s:
-        requestify.from_string(args.s).to_screen()
+        from_string(args.s).to_screen()
 
     if args.f:
-        requestify.from_file(args.f).to_screen()
+        from_file(args.f).to_screen()
 
     if args.c and args.s:
-        requestify.from_clipboard().to_screen()
+        from_clipboard().to_screen()
 
     if args.c and args.f:
-        requestify.from_clipboard().to_file(args.f)
+        from_clipboard().to_file(args.f)
 
     if args.s and args.o:
-        requestify.from_string(args.s).to_file(args.o)
+        from_string(args.s).to_file(args.o)
 
     if args.f and args.o:
-        requestify.from_file(args.s).to_file(args.o)
+        from_file(args.s).to_file(args.o)
 
 
 def main():
@@ -69,11 +102,10 @@ if __name__ == "__main__":
     # import cProfile
     # import pstats
     # with cProfile.Profile() as pr:
-        # replace.from_file('../tests/test_files/test_data.txt').generate_workflow()
-        # replace.from_file('../tests/test_files/test_data.txt').generate_workflow_async()
-    print(replace.from_file('../tests/test_files/test_data.txt').create_responses_text())
+    # replace.from_file('../tests/test_files/test_data.txt').generate_workflow()
+    # replace.from_file('../tests/test_files/test_data.txt').generate_workflow_async()
+    from_file("../tests/test_files/test_data.txt", replace=True).to_screen()
 
     # stats = pstats.Stats(pr)
     # stats.sort_stats(pstats.SortKey.TIME)
     # stats.print_stats()
-

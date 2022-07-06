@@ -3,13 +3,13 @@ from requestify import (
     REQUESTS_CLASS_NAME,
     RESPONSE_VARIABLE_NAME,
     REQUEST_VARIABLE_NAME,
-    __get_file,
     RequestifyObject,
 )
 import asyncio
-from utils import get_responses, get_responses_async, beautify_string
+from utils import get_response, get_responses, beautify_string, is_valid_response
 
 RESPONSES_DICT_NAME = "workflow"
+HEADERS_DICT_NAME = "h_workflow"
 JSON_ERROR_NAME = "JSONDecodeError"
 
 
@@ -29,31 +29,164 @@ class ReplaceRequestify(RequestifyList):
 
         super().__init__(base_list)
 
-        self.workflow = dict()
-        self.functions_called = dict()
-        self.matching_field_names = dict()
+        self.names_and_responses = {}
+        self.headers_workflow = {}
+        self.functions_called = {}
+        self.matching_field_names = {}
 
         self.__generate()
-        self.generate_workflow_async()
+
+    def __generate(self):
+        # self.init_first_response()
+        self.initialize_responses_dict()
+
+        self.initialize_matching_stuff()
+
+    # def init_first_response(self):
+    #     for requestify_object in self.requests:
+    #         response = get_response(requestify_object)
+    #
+    #         if is_valid_response(response):
+    #             self.map_response_to_current_function(
+    #                 requestify_object.function_name, response
+    #             )
+    #
+    def add_new_request(self, requestify_object):
+        response = get_response(requestify_object)
+
+        if is_valid_response(response):
+            self.map_response_to_current_function(
+                requestify_object.function_name, response
+            )
 
     def map_response_to_current_function(self, function_name, response):
         if not isinstance(response, str):
-            self.workflow[function_name] = response
+            self.names_and_responses[function_name] = response
 
-    def map_matching_fields_to_current_function(
-        self, function_name, matching_request_field_name, matching_response_field_name
+    def initialize_responses_dict(self):
+        assert len(self.requests) > 0, "There must be at least one request"
+
+        responses = get_responses(self.requests)
+
+        for request, response in zip(self.requests, responses):
+            self.map_response_to_current_function(request.function_name, response)
+
+    def initialize_matching_stuff(self):
+        for requestify_object in self.requests:
+            function_with_response_matching_data = ""
+            matching_request_field_names = []
+            matching_response_field_names = []
+            current_function = requestify_object.function_name
+
+            for field_name, data_value in requestify_object.data.items():
+                for function_name, response_data in self.names_and_responses.items():
+                    # ignore current function's returned data
+                    if function_name == current_function:
+                        continue
+                    if ReplaceRequestify.found_in_list(data_value, response_data):
+                        self.functions_called[current_function] = function_name
+                        matching_request_field_names.append(field_name)
+                        matching_response_field_names.append(
+                            ReplaceRequestify.get_field_name_and_index(
+                                data_value, response_data
+                            )
+                        )
+
+                        function_with_response_matching_data = function_name
+
+                    elif ReplaceRequestify.found_in_dict(data_value, response_data):
+                        self.functions_called[current_function] = function_name
+                        matching_request_field_names.append(field_name)
+                        matching_response_field_names.append(
+                            ReplaceRequestify.get_field_name_matching_value(
+                                data_value, response_data
+                            )
+                        )
+
+                        function_with_response_matching_data = function_name
+
+                    else:
+                        break
+
+
+            self.map_matching_stuff_to_current_function(
+                current_function,
+                matching_request_field_names,
+                matching_response_field_names,
+                function_with_response_matching_data,
+            )
+
+    @staticmethod
+    def found_in_list(value, list_of_data):
+        return isinstance(list_of_data, list) and ReplaceRequestify.is_in_list_of_dicts(
+            value, list_of_data
+        )
+
+    @staticmethod
+    def is_in_list_of_dicts(value, list_of_dicts):
+        for dict in list_of_dicts:
+            if value in dict.values():
+                return True
+
+        return False
+
+    @staticmethod
+    def found_in_dict(value, data_dict):
+        return isinstance(data_dict, dict) and value in data_dict.values()
+
+    @staticmethod
+    def get_field_name_and_index(sought_value, list_of_dicts):
+        for index, dict in enumerate(list_of_dicts):
+            ret = ReplaceRequestify.get_field_name_matching_value(sought_value, dict)
+            if ret:
+                return (ret, index)
+
+    @staticmethod
+    def get_field_name_matching_value(sought_value, dict):
+        for field_name, value in dict.items():
+            if sought_value == value:
+                return field_name
+
+    def map_matching_stuff_to_current_function(
+        self,
+        function_name,
+        matching_request_field_names,
+        matching_response_field_names,
+        function_called,
     ):
         if (
             function_name
-            and matching_request_field_name
-            and matching_response_field_name
+            and matching_request_field_names
+            and matching_response_field_names
+            and function_called
         ):
-            self.matching_field_names.setdefault(function_name, []).append(
-                (
-                    matching_request_field_name,
-                    matching_response_field_name,
+            for request_field, response_field in zip(
+                matching_request_field_names, matching_response_field_names
+            ):
+                self.matching_field_names.setdefault((function_name, function_called), []).append(
+                    (
+                        request_field,
+                        response_field,
+                    )
                 )
-            )
+
+    def map_matching_fields_to_current_function(
+        self, function_name, matching_request_field_names, matching_response_field_names
+    ):
+        if (
+            function_name
+            and matching_request_field_names
+            and matching_response_field_names
+        ):
+            for request_field, response_field in zip(
+                matching_request_field_names, matching_response_field_names
+            ):
+                self.matching_field_names.setdefault(function_name, []).append(
+                    (
+                        request_field,
+                        response_field,
+                    )
+                )
 
     def map_matching_response_function_to_current_function(
         self, function_name, function_called
@@ -64,110 +197,7 @@ class ReplaceRequestify(RequestifyList):
         """
         self.functions_called[function_name] = function_called
 
-    def map_matching_stuff_to_current_function(
-        self,
-        function_name,
-        matching_request_field_name,
-        matching_response_field_name,
-        function_called,
-    ):
-        if (
-            function_name
-            and matching_request_field_name
-            and matching_response_field_name
-            and function_called
-        ):
-            self.map_matching_fields_to_current_function(
-                function_name, matching_request_field_name, matching_response_field_name
-            )
-            self.map_matching_response_function_to_current_function(
-                function_name, function_called
-            )
-
-    def __generate(self):
-        self.initialize_matching_stuff()
-        self.generate_workflow_async()
-
-    def generate_workflow_async(self):
-        assert len(self.requests) > 0, "There must be at least one request"
-
-        responses = asyncio.run(get_responses_async(self.requests))
-
-        for requestify_object, response in zip(self.requests, responses):
-            self.map_response_to_current_function(
-                requestify_object.function_name, response
-            )
-
-    def generate_workflow(self):
-        assert len(self.requests) > 0, "There must be at least one request"
-
-        responses = get_responses(self.requests)
-
-        for request, response in zip(self.requests, responses):
-            self.map_response_to_current_function(request.function_name, response)
-
-    @staticmethod
-    def is_in_list_of_dicts(value, list_of_dicts):
-        return (value in dict.values() for dict in list_of_dicts)
-
-    @staticmethod
-    def get_all_field_names_matching_value(sought_value, list_of_dicts):
-        return (
-            ReplaceRequestify.get_field_name_matching_value(sought_value, dict)
-            for dict in list_of_dicts
-        )
-
-    @staticmethod
-    def get_field_name_matching_value(sought_value, dict):
-        return (
-            field_name for field_name, value in dict.items() if sought_value == value
-        )
-
-    @staticmethod
-    def found_in_list(value, list):
-        return isinstance(list, list) and ReplaceRequestify.is_in_list_of_dicts(value, list)
-
-    @staticmethod
-    def found_in_dict(value, dict):
-        return isinstance(dict, dict) and value in dict.values()
-
-    def initialize_matching_stuff(self):
-        for requestify_object in self.requests:
-            function_with_response_matching_data = ""
-            matching_request_field_name = ""
-            matching_response_field_name = ""
-            current_function = requestify_object.function_name
-
-            for field_name, data_value in list(requestify_object.data.items()):
-                for function_name, response_data in self.workflow.items():
-                    if ReplaceRequestify.found_in_list(response_data, data_value):
-                        function_with_response_matching_data = function_name
-
-                        matching_request_field_name = field_name
-                        matching_response_field_name = (
-                            ReplaceRequestify.get_all_field_names_matching_value(
-                                data_value, response_data
-                            )
-                        )
-
-                    elif ReplaceRequestify.found_in_dict(data_value, response_data):
-                        function_with_response_matching_data = function_name
-
-                        matching_request_field_name = field_name
-                        matching_response_field_name = (
-                            ReplaceRequestify.get_field_name_matching_value(
-                                data_value, response_data
-                            )
-                        )
-
-            self.map_matching_stuff_to_current_function(
-                current_function,
-                matching_request_field_name,
-                matching_response_field_name,
-                function_with_response_matching_data,
-            )
-
-    def create_responses_text(self, with_headers=True, with_cookies=True):
+    def __create_responses_text(self, with_headers=True, with_cookies=True):
         indent = "\t\t"
 
         requests_text = [
@@ -188,21 +218,34 @@ class ReplaceRequestify(RequestifyList):
 
             function_called = self.functions_called.get(request.function_name)
 
-            if function_called:
-                # if the request has
-                if request.data:
-                    # data is always last
-                    matching_fields = self.matching_field_names[request.function_name]
+            if request.data:
+                matching_fields = self.matching_field_names[(request.function_name)]
+                nonmatching_fields = [
+                    field_name
+                    for field_name, _ in request.data.items()
+                    if field_name not in matching_fields
+                ]
 
-                    request_field_names = [field[0] for field in matching_fields]
-                    response_field_names = [field[1] for field in matching_fields]
+                request_field_names = [field[0] for field in matching_fields]
+                response_field_names = [field[1] for field in matching_fields]
 
-                    for request_field_name, response_field_name in zip(
-                        request_field_names, response_field_names
-                    ):
-                        new_data = f"{indent}data = {{'{request_field_name}': self.{RESPONSES_DICT_NAME}['{function_called}']['{response_field_name}']}}\n"
-                        # response[-2] = new_data
-                    response[-2] = new_data
+                new_data = f"{indent}data = {{"
+                for request_field_name, response_field_name in zip(
+                    request_field_names, response_field_names
+                ):
+                    if isinstance(response_field_name, str):
+                        new_data += f"'{request_field_name}': self.{RESPONSES_DICT_NAME}['{function_called}']['{response_field_name}'], "
+                    elif isinstance(response_field_name, tuple):
+                        new_data += f"'{request_field_name}': self.{RESPONSES_DICT_NAME}['{function_called}']['{response_field_name[0]}'][{response_field_name[1]}], "
+
+                for name, value in request.data.items():
+                    if name not in request_field_names:
+                        new_data += f"'{name}': value, "
+
+                new_data += "}\n"
+                # if the request has a data field, in the generated response it will be the last field
+                response[-2] = new_data
+                # response[-2] = new_data
 
             final_response = "\n".join(response)
 
@@ -210,27 +253,21 @@ class ReplaceRequestify(RequestifyList):
                 f"\tdef {request.function_name}(self):{final_response}"
             )
             requests_text.append(
-                "\n\t\t".join([
-                "\t\ttry:",
-                f"\t{RESPONSE_VARIABLE_NAME}={REQUEST_VARIABLE_NAME}.json()",
-                f"\tpprint.pprint({REQUEST_VARIABLE_NAME}.json())",
-                f"except {JSON_ERROR_NAME}:",
-                f"\t{RESPONSE_VARIABLE_NAME}={REQUEST_VARIABLE_NAME}.text",
-                f"\tpprint.pprint({REQUEST_VARIABLE_NAME}.text)\n"])
+                "\n\t\t".join(
+                    [
+                        "\t\ttry:",
+                        f"\t{RESPONSE_VARIABLE_NAME}={REQUEST_VARIABLE_NAME}.json()",
+                        f"\tpprint.pprint({REQUEST_VARIABLE_NAME}.json())",
+                        f"except {JSON_ERROR_NAME}:",
+                        f"\t{RESPONSE_VARIABLE_NAME}={REQUEST_VARIABLE_NAME}.text",
+                        f"\tpprint.pprint({REQUEST_VARIABLE_NAME}.text)\n",
+                    ]
+                )
             )
-
-            function_called = self.functions_called.get(request.function_name)
-            matching_field_names = self.matching_field_names.get(request.function_name)
 
             requests_text.append(
                 f"\t\tself.{RESPONSES_DICT_NAME}['{request.function_name}']={RESPONSE_VARIABLE_NAME}"
             )
-            # if function_called:
-            #     requests_text.append(
-            #         f"\t\tself.{RESPONSES_DICT_NAME}['{self.functions_called[request.function_name]}']={RESPONSE_VARIABLE_NAME}"
-            #     )
-
-            # requests_text.append("\n")
 
         requests_text.append("\tdef call_all(self):")
         requests_text.append(
@@ -242,27 +279,12 @@ class ReplaceRequestify(RequestifyList):
         requests_text.append("if __name__ == '__main__': ")
         requests_text.append(f"\t{REQUESTS_CLASS_NAME}().call_all()")
         return beautify_string("\n".join(requests_text))
-        # return "\n".join(requests_text)
 
     def __write_to_stdio(self, with_headers=True, with_cookies=True):
-        requests_as_functions = self.create_responses_text(
+        requests_as_functions = self.__create_responses_text(
             with_headers=with_headers, with_cookies=with_cookies
         )
         print(requests_as_functions)
 
     def to_screen(self):
         self.__write_to_stdio()
-
-
-def from_string(string):
-    return ReplaceRequestify([string])
-
-
-def from_file(filename):
-    requests_from_file = __get_file(filename)
-    assert requests_from_file, "No data in the specified file"
-    if len(requests_from_file) == 1:
-        requests = RequestifyObject(requests_from_file[0])
-    else:
-        requests = ReplaceRequestify(requests_from_file)
-    return requests
