@@ -120,3 +120,17 @@ def get_netloc(url):
 
 def is_valid_response(response):
     return isinstance(response, dict) or isinstance(response, list)
+
+
+def is_list_of_jsons(list_to_test):
+    if not isinstance(list_to_test, list):
+        return False
+    for assumed_dict in list_to_test:
+        if not isinstance(assumed_dict, dict):
+            return False
+
+    return True
+
+
+def is_json(data):
+    return is_list_of_jsons or isinstance(data, dict)
