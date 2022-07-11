@@ -1,23 +1,77 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import re
-import asyncio
-import json
 import requests
+import itertools
 from urllib import parse
-from httpx import AsyncClient
 from collections import defaultdict
-from utils import get_data_dict, get_netloc, beautify_string, get_json_or_text
+from .utils import get_data_dict, get_netloc, beautify_string, get_json_or_text
 
 
 # name that will be used for class with requests
 REQUESTS_CLASS_NAME = "RequestsTest"
 RESPONSE_VARIABLE_NAME = "response"
 REQUEST_VARIABLE_NAME = "request"
-OPTS_REGEX = re.compile(""" (-{1,2}\S+)\s+?"([\S\s]+?)"|(-{1,2}\S+)\s+?'([\S\s]+?)'""")
+OPTS_REGEX = re.compile(
+    """ (-{1,2}\S+)\s+?"([\S\s]+?)"|(-{1,2}\S+)\s+?'([\S\s]+?)'""", re.VERBOSE
+)
+URL_REGEX = re.compile(
+    "((?:(?<=[^a-zA-Z0-9]){0,}(?:(?:https?\:\/\/){0,1}(?:[a-zA-Z0-9\%]{1,}\:[a-zA-Z0-9\%]{1,}[@]){,1})(?:(?:\w{1,}\.{1}){1,5}(?:(?:[a-zA-Z]){1,})|(?:[a-zA-Z]{1,}\/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\:[0-9]{1,4}){1})){1}(?:(?:(?:\/{0,1}(?:[a-zA-Z0-9\-\_\=\-]){1,})*)(?:[?][a-zA-Z0-9\=\%\&\_\-]{1,}){0,1})(?:\.(?:[a-zA-Z0-9]){0,}){0,1})"
+)
+
+
+def format_url(url):
+    url = url.strip("'").strip('"').rstrip("/")
+    if not (
+        url.startswith("//") or url.startswith("http://") or url.startswith("https://")
+    ):
+        url = "https://" + url  # good enough
+
+    return url
+
+
+def find_url_or_error(list_of_strings):
+    might_include_url = "".join(list_of_strings)
+    url = re.search(URL_REGEX, might_include_url)
+    if not url:
+        raise ValueError("Could not find a url")
+    return url.group(0)
+
+
+def remove_url_from_list_of_strings(list_of_strings):
+    url = find_url_or_error(list_of_strings)
+    list_of_strings_without_url = []
+    for string in list_of_strings:
+        if url in string:
+            continue
+        list_of_strings_without_url.append(string)
+    return list_of_strings_without_url
+
+
+# https://stackoverflow.com/questions/5389507/iterating-over-every-two-elements-in-a-list
+def pairwise(iterable):
+    "s -> (s0, s1), (s2, s3), (s4, s5), ..."
+    a = iter(iterable)
+    return zip(a, a)
+
+
+# prolly not working
+def uppercase_boolean_values(opts):
+    ret_opts = []
+    for _, value in opts:
+        if value.find("false") != -1:
+            value = value.replace("false", "False")
+        if value.find("true") != -1:
+            value = value.replace("true", "True")
+        ret_opts.append((_, value))
+
+    return ret_opts
 
 
 class RequestifyObject(object):
+    def __repr__(self):
+        return f"RequestifyObject{self.base_string}"
+
     def __init__(self, base_string):
         self.base_string = " ".join(base_string.replace("\\", "").split())
         self.url = ""
@@ -25,7 +79,7 @@ class RequestifyObject(object):
         self.headers = {}
         self.cookies = {}
         self.data = dict()
-        self.__post_handler = {
+        self.__data_handler = {
             "-d": lambda x: get_data_dict(x),
             "--data": lambda x: get_data_dict(x),
             "--data-ascii": lambda x: get_data_dict(x),
@@ -38,94 +92,70 @@ class RequestifyObject(object):
 
     def __generate(self):
         meta = self.base_string.split(" ", 2)
-        opts = {}
-        assert len(meta) > 1, "Not a valid cURL request"
+        assert len(meta) > 1, "No URL provided"
+        assert meta[0] == "curl", "Not a valid cURL request"
 
         if len(meta) == 2:
-            prefix, url = meta
+            url = meta[1]
+            self.__initialize_curl_and_url_only(url)
         else:
-            # normal order is curl url -X GET
-            prefix, url_or_flag, opts_string = meta
+            meta_without_curl = meta[1:]
+            self.__set_url(meta_without_curl)
+            meta_without_url = remove_url_from_list_of_strings(meta_without_curl)
+            self.__set_method(meta_without_url)
+            self.__set_opts(meta_without_url)
 
-            # if request is like curl -X GET url -H headers, flag will be second, not url
-            if url_or_flag == "-X":  # TODO: replace with better check (more flags)
-                method_and_url = opts_string.split(" ", 2)
-                assert len(method_and_url) > 1, "Not a valid cURL request"
-
-                method = method_and_url[0].rstrip(":")
-                url = method_and_url[1]
-
-                if len(method_and_url) == 3:
-                    opts_string = method_and_url[2]
-            else:
-                # if request is like curl url -X GET -H headers, url will be second, and method with flag 3rd
-                url = url_or_flag
-                flag_with_method_or_header = opts_string.split(" ", 2)
-                assert len(flag_with_method_or_header) > 1, "Not a valid cURL request"
-
-                flag = flag_with_method_or_header[0]
-                if flag == "-X":
-                    method = flag_with_method_or_header[1].rstrip(":")
-                else:
-                    opts_string = " " + opts_string
-                    method = "get"
-            # WARNING: this will not work for escaped " or ', as I first delete all \ characters
-            opts = re.findall(
-                """ (-{1,2}\S+)\s+?"([\S\s]+?)"|(-{1,2}\S+)\s+?'([\S\s]+?)'""",
-                opts_string,
-            )
-            self.method = method.strip("'").strip('"').lower()
-
-            # TODO: find a better method(maybe replace all ' with " or vice-versa)
-            single_quoted = []
-            double_quoted = []
-
-            for option in opts:
-                single_quoted.append(option[0:2])
-                double_quoted.append(option[2:4])
-
-            self.__set_opts(single_quoted if single_quoted else double_quoted)
-
-        assert prefix.strip("'").strip('"') == "curl", "Not a valid cURL request"
-
-        url = url.strip("'").strip('"').rstrip("/")
-        if not (
-            url.startswith("//")
-            or url.startswith("http://")
-            or url.startswith("https://")
-        ):
-            url = "https://" + url  # good enough
-
-        self.url = url
         self.__set_function_name()
 
-    def __set_opts(self, opts):
-        headers = []
-        for k, v in opts:
-            if k == "-H":
-                headers.append(v)
+    def __initialize_curl_and_url_only(self, url):
+        if re.search(URL_REGEX, url):
+            self.url = url
+            self.method = "get"
+        else:
+            raise ValueError("Request method not specified, and is not a GET")
 
-            if v.find("false") != -1:
-                v = v.replace("false", "False")
-            elif v.find("true") != -1:
-                v = v.replace("true", "Talse")
+    def __set_url(self, meta):
+        url = find_url_or_error(meta)
+        url = format_url(url)
+        self.url = url
 
-            if k in self.__post_handler:
+    def __set_method(self, meta):
+        list_of_things = " ".join(meta).split(" ")
+        for method, flag in pairwise(list_of_things):
+            if flag == "-X":
+                self.method = method
+                break
+            if flag in self.__data_handler:
                 if self.method == "get":
                     self.method = "post"
-                self.data = self.__post_handler[k](v)
 
+    def __set_opts(self, meta):
+        opts = self.__get_opts(meta)
+        opts = uppercase_boolean_values(opts)
+
+        self.__set_body(opts)
+        headers = [option[1] for option in opts]
         self.__format_headers(headers)
 
-    def __format_cookies(self, text):
-        cookies = text.split("; ")
-        for cookie in cookies:
-            try:
-                k, v = cookie.split("=", 1)
-                self.cookies[k] = v
-            except ValueError:
-                raise
-        return self.cookies
+    # TODO: implement support for flags like --compressed
+    def __get_opts(self, meta):
+        might_include_opts = "".join(meta)
+        opts = re.findall(OPTS_REGEX, might_include_opts)
+        _ = list(itertools.chain.from_iterable(opts))
+        opts = [option for option in _ if option]
+
+        assert len(opts) % 2 == 0, "Request header(s) or flag(s) missing"
+        ret_opts = []
+        for flag, data in pairwise(opts):
+            if flag == "-H":
+                ret_opts.append((flag, data))
+
+        return ret_opts
+
+    def __set_body(self, opts):
+        for flag, value in opts:
+            if flag in self.__data_handler:
+                self.data = self.__data_handler[flag](value)
 
     def __format_headers(self, headers):
         for header in headers:
@@ -142,38 +172,45 @@ class RequestifyObject(object):
                 self.headers[k] = v  # type: ignore
         return self.headers
 
+    def __format_cookies(self, text):
+        cookies = text.split("; ")
+        for cookie in cookies:
+            try:
+                k, v = cookie.split("=", 1)
+                self.cookies[k] = v
+            except ValueError:
+                raise
+        return self.cookies
+
     def __set_function_name(self):
         netloc = get_netloc(self.url)
         function_name = f"{self.method}_{netloc}"
-
         self.function_name = function_name
 
     # returns base as list(without imports, only the text), unbeautified string
-    def create_responses_base(self, indent="", with_headers=True, with_cookies=True):
+    def create_responses_base(self, with_headers=True, with_cookies=True):
         request_options = ""
-        wait_to_write = [indent]
+        wait_to_write = []
         if with_headers:
-            wait_to_write.append(f"{indent}headers = {self.headers}")
+            wait_to_write.append(f"headers = {self.headers}")
             request_options += ", headers=headers"
 
         if with_cookies:
-            wait_to_write.append(f"{indent}cookies = {self.cookies}")
+            wait_to_write.append(f"cookies = {self.cookies}")
             request_options += ", cookies=cookies"
 
         if self.data:
-            wait_to_write.append(f"{indent}data = {self.data}")
+            wait_to_write.append(f"data = {self.data}")
             request_options += ", data=data"
 
         wait_to_write.append(
-            f"{indent}{REQUEST_VARIABLE_NAME} = requests.{self.method}('{self.url}'"
-            + request_options
-            + ")"
+            f"{REQUEST_VARIABLE_NAME} = requests.{self.method}('{self.url}'{request_options})"
         )
 
         return wait_to_write
 
     def create_beautiful_response(self, with_headers=True, with_cookies=True):
-        response = "\n".join(self.create_responses_base("", with_headers, with_cookies))
+        response = "\n".join(self.create_responses_base(with_headers, with_cookies))
         wait_to_write = [
             "import requests",
             response,
@@ -229,23 +266,23 @@ class RequestifyList(object):
         for request in self.requests:
             response = "\n".join(
                 request.create_responses_base(
-                    indent="\t\t", with_headers=with_headers, with_cookies=with_cookies
+                    with_headers=with_headers, with_cookies=with_cookies
                 )
             )
-            requests_text.append(f"\tdef {request.function_name}(self):{response}")
+            requests_text.append(f"def {request.function_name}(self):{response}")
 
-        requests_text.append("\tdef call_all(self):")
+        requests_text.append("def call_all(self):")
         requests_text.append(
             "".join(
                 [
-                    f"\t\tself.{function_name}()\n"
+                    f"self.{function_name}()\n"
                     for function_name in self.existing_function_names
                 ]
             )
         )
 
         requests_text.append("if __name__ == '__main__': ")
-        requests_text.append(f"\t{REQUESTS_CLASS_NAME}().call_all()")
+        requests_text.append(f"{REQUESTS_CLASS_NAME}().call_all()")
 
         return beautify_string("\n".join(requests_text))
 
@@ -273,31 +310,3 @@ class RequestifyList(object):
 
     def to_screen(self):
         self.__write_to_stdio()
-
-    def execute(self):
-        ret = []
-        for request in self.requests:
-            ret.append(request.execute())
-
-        return ret
-
-    async def execute_async(self):
-        ret = []
-
-        async with AsyncClient() as client:
-            tasks = (
-                client.request(
-                    method=request.method,
-                    url=request.url,
-                    headers=request.headers,
-                    cookies=request.cookies,
-                )
-                for request in self.requests
-            )
-            responses = await asyncio.gather(*tasks)
-
-        for response in responses:
-            responses_text = get_json_or_text(response)
-            ret.append(responses_text)
-
-        return ret

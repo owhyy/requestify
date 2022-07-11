@@ -1,193 +1,191 @@
-import unittest
+import pytest
 import requests
-import requestify
-import re
+from requestify import requestify
 
 EBS = "https://ebs.io"
 GOOGLE = "https://google.com"
 GITHUB = "https://github.com"
 
+REQUEST_VARIABLE_NAME = "request"
 
-class TestRequestify(unittest.TestCase):
-    def check_equal(self, my_response, response):
-        self.assertEqual(my_response.url, response.url)
-        self.assertEqual(my_response.headers, response.headers)
-        self.assertEqual(my_response.data, response.data)
-        self.assertEqual(my_response.cookies, response.cookies)
 
-    def check(self, url, curl="", headers={}, cookies={}):
-        if not curl:
-            curl = f"""curl -X GET {url}"""
-        response = requests.get(url, headers=headers, cookies=cookies)
-        my_response = requestify.from_string(curl)
+class TestRequestifyObject:
+    # TODO: come up with a better name
+    def assert_everything_matches(
+        self, req, url=None, method=None, headers={}, data={}, cookies={}
+    ):
+        assert req.url == url
+        assert req.method == method
+        assert req.headers == headers
+        assert req.data == data
+        assert req.cookies == cookies
 
-        self.assertEqual(my_response.url.rstrip("/"), response.url.rstrip("/"))
-        # response.headers returns more headers that those passed, so we'll just test the response text instead
-        self.assertEqual(my_response.execute().strip("\n"), response.text.strip("\n"))
+    @pytest.mark.parametrize("method", ("GET", "POST", "PUT", "PATCH", "HEAD"))
+    def test_no_headers_no_data_no_cookies(self, method):
+        req = requestify.RequestifyObject(f"curl -X {method} {GOOGLE}")
+        self.assert_everything_matches(req, GOOGLE, method.lower(), {}, {}, {})
 
-        # wish we could do something like
-        # if headers:
-        #     self.assertRegex(response.headers.values(), my_response.headers.values())
-        # if cookies:
-        #     self.assertEqual(my_response.cookies, response.cookies)
-        # if data:
-        #     self.assertEqual(my_response.data, response.raw)
-
-    def test_flag_get_address(self):
-        self.check(EBS)
-
-    def test_address_flag_get(self):
-        self.check(EBS, f'curl "{EBS}" -X GET')
-
-    def test_headers(self):
-        curl = f"""curl -X GET "{EBS}" \
-       -H 'Accept: application/json, text/plain, */*' \
-       -H 'Accept-Language: en' \
-       -H 'Connection: keep-alive'"""
-
-        headers = {
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "en",
-            "Connection": "keep-alive",
-        }
-
-        self.check(EBS, curl=curl, headers=headers)
-
-    def test_cookies(self):
-        curl = """
-        curl "https://github.com" -X GET \
-        -H 'Cookie:
-        logged_in=yes; user_session=this_is_a_cookie; xyz=qwerty;'
-        """
-
-        cookies = {
-            "logged_in": "yes",
-            "usser_session": "this_is_a_cookie",
-            "xyz": "querty",
-        }
-
-        response = requests.get(GITHUB, cookies=cookies)
-        my_response = requestify.from_string(curl)
-        # we can't check for data because it's generated randomly
-        self.assertEqual(response.url.strip("/"), my_response.url.strip("/"))
-
-    def test_noflag_get_address(self):
-        curl = '''curl GET "https://google.com"'''
-
-        with self.assertRaises(AssertionError):
-            try:
-                requestify.from_string(curl)
-            except AssertionError:
-                raise
-
-    def test_nomethod_noflag_get_address(self):
-        self.check(EBS, curl=f'curl "{EBS}"')
-
-    def test_flag_post_address(self):
-        curl = f"curl -X POST {GITHUB}"
-        response = requests.post(GITHUB)
-        my_response = requestify.from_string(curl)
-
-        self.assertEqual(my_response.method, "post")
-        self.assertEqual(my_response.execute().strip("\n"), response.text.strip("\n"))
-
-    def test_nomethod_noflag_has_data_address(self):
-        curl = f"""curl "{EBS}" --data-raw '{{"username":"Test123","password":"Test123"}}'"""
-
-        data = {"username": "Test123", "password": "Test123"}
-        response = requests.post(EBS, data=data)
-
-        my_response = requestify.from_string(curl)
-
-        self.assertEqual(my_response.method, "post")
-        self.assertEqual(my_response.url.strip("/"), response.url.strip("/"))
-
-    def test_noprotocol_url(self):  # todo
-        self.check(EBS, curl='curl -X GET "ebs.io"')
-
-    def test_noquotes_url(self):
-        self.check(EBS, curl="curl -X GET https://ebs.io")
-
-    def test_dotted_domain_name(self):
-        url = "https://drf-yasg.readthedocs.io/en/stable/"
-        self.check(url, curl=f'curl -X GET "{url}"')
-
-    def test_noprotocol_www_hostname(self):  # todo
-        self.check(GOOGLE, curl=f'curl -X GET "www.google.com"')
-
-    def test_www_hostname(self):
-        url = "www.google.comresponse.urlresponse.url"
-        self.check(url, curl=f'curl -X GET "{url}"')
-
-    def test_resource(self):
-        self.check(
-            f"{GOOGLE}/search?q=cats",
-            curl='curl -X GET "https://www.google.com/search?q=cats"',
+    @pytest.mark.parametrize(
+        "curl",
+        (
+            f"curl -X POST {GOOGLE} -H 'content-type: application/json'",
+            f"curl {GOOGLE} -X POST -H 'content-type: application/json'",
+            f"curl {GOOGLE} -H 'content-type: application/json' -X POST ",
+            f"curl -X POST -H 'content-type: application/json' {GOOGLE}",
+            f"curl -H 'content-type: application/json' -X POST {GOOGLE}",
+            f"curl     -X    POST    {GOOGLE}    -H     'content-type: application/json'",
+        ),
+    )
+    def test_different_curl_positions(self, curl):
+        req = requestify.RequestifyObject(curl)
+        self.assert_everything_matches(
+            req=req, url=GOOGLE, method="post", data={"content-type: application/json"}
         )
 
-    def test_no_url(self):
-        self.assertRaises(Exception, requestify.from_string("curl"))
+    def test_with_headers_no_data_no_cookies(self):
+        req = requestify.RequestifyObject(
+            f"""curl -X post {GOOGLE} -H 'accept: application/json' -H 'X-CSRFToken: wRL3SoeQUYlKXdJ3VtQORHDjMgplSOBfwwTM24zUZHfimB5LUMw3Xfmii1jHmjFK' """
+        )
 
-    def test_spaces_in_curl(self):
-        self.check(EBS, curl=f'curl   -X    GET     "{EBS}"')
+        headers = {
+            "accept": "application/json",
+            "X-CSRFToken": "wRL3SoeQUYlKXdJ3VtQORHDjMgplSOBfwwTM24zUZHfimB5LUMw3Xfmii1jHmjFK",
+        }
 
-    # this should be ignored I guess?
-    def test_chrome_extension_url(self):
-        curl = """
-        curl 'chrome-extension://fmkadmapgofadopljbjfkapdkoienihi/build/react_devtools_backend.js' \
-        -H 'Referer: ' \
-        -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \
-        --compressed ;
-        """
+        self.assert_everything_matches(req, GOOGLE, "post", headers, {}, {})
 
-    def test_base(self):
+    def test_with_no_headers_with_data_no_cookies(self):
+        req = requestify.RequestifyObject(f"""curl -X post  """)
+
+        data = {
+            "accept": "application/json",
+            "X-CSRFToken": "wRL3SoeQUYlKXdJ3VtQORHDjMgplSOBfwwTM24zUZHfimB5LUMw3Xfmii1jHmjFK",
+        }
+
+        self.assert_everything_matches(req, GOOGLE, "post", headers, {}, {})
+
+    def test_curl_and_url_only(self):
+        req = requestify.RequestifyObject(f"curl {GOOGLE}")
+        self.assert_everything_matches(req, GOOGLE, "get", {}, {}, {})
+
+    @pytest.mark.parametrize("method", ("GET", "POST", "PUT", "PATCH", "HEAD"))
+    def test_base_response_no_headers_no_data_no_cookies(self, method):
+        req = requestify.RequestifyObject(f"curl -X {method} {GOOGLE}")
+        base_method = [
+            "headers = {}",
+            "cookies = {}",
+            f"{REQUEST_VARIABLE_NAME} = requests.{req.method}('{req.url}', headers=headers, cookies=cookies)",
+        ]
+        assert req.create_responses_base() == base_method
+
+    def test_base_response_with_headers_no_data_no_cookies(self):
+        req = requestify.RequestifyObject(
+            f"""curl -X post {GOOGLE} -H 'accept: application/json' -H 'X-CSRFToken: wRL3SoeQUYlKXdJ3VtQORHDjMgplSOBfwwTM24zUZHfimB5LUMw3Xfmii1jHmjFK'"""
+        )
+        base_method = [
+            """headers = {'accept: application/json', 'X-CSRFToken: wRL3SoeQUYlKXdJ3VtQORHDjMgplSOBfwwTM24zUZHfimB5LUMw3Xfmii1jHmjFK'}""",
+            "cookies = {}",
+            f"{REQUEST_VARIABLE_NAME} = requests.{req.method}('{req.url}', headers=headers, cookies=cookies)",
+        ]
+        assert req.create_responses_base() == base_method
+
+    # TODO: add more cases
+    @pytest.mark.parametrize(
+        "invalid_curl",
+        (
+            "",
+            "qwerty",
+        ),
+    )
+    def test_invalid_curl(self, invalid_curl):
+        with pytest.raises(AssertionError):
+            requestify.RequestifyObject(f"{invalid_curl} {GOOGLE}")
+
+    def test_lowercase_boolean_headers(self):
+        req = requestify.RequestifyObject(
+            f"""curl -X post {GOOGLE} -H 'something: false' -H 'something_else: true'"""
+        )
+
+        headers = {
+            "something": "False",
+            "something_else": "True",
+        }
+
+        self.assert_everything_matches(req=req, url=GOOGLE, method="post", data=headers)
+
+    def test_method_url_headers(self):
         pass
 
-    def test_beautify(self):
-        curl = """
-        curl "https://google.com" -X GET
-        """
-
-        correct_requests = """import requests
-
-headers = {}
-cookies = {}
-response = requests.get("https://google.com", headers=headers, cookies=cookies)
-print(response.text)
-"""
-
-        actual_requests = requestify.from_string(curl).create_beautiful_response()
-        self.assertEqual(correct_requests, actual_requests)
-
-    def test_has_separator(self):
-        url = "https://eurasia-precept-api.devebs.net/users/login"
-        curl = f"""
-curl '{url}' -X 'OPTIONS' \
-  -H 'Accept: */*' \
-  -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
-        """
-
-        headers = {"Accept": "*/*", "Accept-Language": "en-US,en;q=0.9,ro;q=0.8"}
-
-        response = requests.options(url, headers=headers)
-        my_response = requestify.from_string(curl)
-        self.assertEqual(my_response.url, response.url)
-        self.assertEqual(my_response.method, "options")
-        self.assertEqual(my_response.execute().strip("\n"), response.text.strip("\n"))
-
-    # def test_from_file(self):
-    #     self.assertEqual(requestify.from_file('curls'), [])
-
-    def test_false_replace(self):
-        self.assertEqual(requestify.from_file("curls"), [])
-
-
-class TestRequestifyList(unittest.TestCase):
-    def test_list_create_responses_text(self):
+    def test_url_method_headers(self):
         pass
 
-    def test_create_function_name(self):
+    def test_get_url(self):
+        opts = """-H 'accept: application/json' -H 'X-CSRFToken: wRL3SoeQUYlKXdJ3VtQORHDjMgplSOBfwwTM24zUZHfimB5LUMw3Xfmii1jHmjFK'"""
+        curl = f"""curl -X post {GOOGLE} {opts}"""
+
+        assert opts == requestify.RequestifyObject.get_opts_string(curl)
+
+    def test_add_scheme_to_url(self):
         pass
 
-    def test_from_file(self):
-        requestify.from_file("curls").to_screen()
+    def test_find_url_or_error_valid(self):
+        pass
+
+    def test_find_url_or_error_throws(self):
+        pass
+
+    def test_pairwise(self):
+        pass
+
+    def test_uppercase_boolean_values(self):
+        opts = [('x', "true"), ('y', "false")]
+        assert [('x', "True"), ('y', "False")] == requestify.uppercase_boolean_values(opts)
+
+    def test_get_opts(self):
+        pass
+
+    def test_create_beautiful(self):
+        pass
+
+    def test_to_screen(self):
+        pass
+
+    def test_to_file(self):
+        pass
+
+    def test_more_headers(self):
+        req = requestify.RequestifyObject(
+            """curl 'https://main.api.dev.ebs.io/users/login/user/' \
+      -X 'OPTIONS' \
+      -H 'Accept: */*' \
+      -H 'Accept-Language: en-US,en;q=0.9,ro;q=0.8' \
+      -H 'Access-Control-Request-Headers: authorization,content-type' \
+      -H 'Access-Control-Request-Method: POST' \
+      -H 'Connection: keep-alive' \
+      -H 'Origin: https://nemo.dev.ebs.io' \
+      -H 'Referer: https://nemo.dev.ebs.io/' \
+      -H 'Sec-Fetch-Dest: empty' \
+      -H 'Sec-Fetch-Mode: cors' \
+      -H 'Sec-Fetch-Site: same-site' \
+      -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36' \'"""
+        )
+        assert req == req
+
+    def test_remove_url_from_list_of_strings(self):
+        pass
+
+class RequestifyListTest:
+    def test_init(self):
+        pass
+
+    def test_create_responses_base(self):
+        pass
+
+    def test_create_beautiful(self):
+        pass
+
+    def test_to_screen(self):
+        pass
+
+    def test_to_file(self):
+        pass

@@ -7,7 +7,17 @@ from requestify import (
     RequestifyObject,
 )
 import asyncio
-import pprint
+from pprint import pprint
+from text_utils import (
+    generate_imports_text,
+    indent_function_inside_class,
+    indent_function_inside_class,
+    generate_function_text_inside_class,
+    generate_function_text_outside_class,
+    indent_class,
+    generate_class_text,
+)
+
 from utils import (
     get_response,
     get_responses,
@@ -83,13 +93,13 @@ class ReplaceRequestify(RequestifyList):
     #                 requestify_object.function_name, response
     #             )
     #
-    def add_new_request(self, requestify_object):
-        response = get_response(requestify_object)
-
-        if is_valid_response(response):
-            self.map_response_to_current_function(
-                requestify_object.function_name, response
-            )
+    # def add_new_request(self, requestify_object):
+    #     response = get_response(requestify_object)
+    #
+    #     if is_valid_response(response):
+    #         self.map_response_to_current_function(
+    #             requestify_object.function_name, response
+    #         )
 
     @staticmethod
     def convert_response_to_list(response):
@@ -107,17 +117,19 @@ class ReplaceRequestify(RequestifyList):
                 function_name
             ] = ReplaceRequestify.convert_response_to_list(response)
 
+    def map_all_functions_to_their_responses(self, responses):
+        for request, response in zip(self.requests, responses):
+            self.map_response_to_current_function(request.function_name, response)
+
     def initialize_responses_dict(self):
         assert len(self.requests) > 0, "There must be at least one request"
 
         responses = get_responses(self.requests)
-
-        for request, response in zip(self.requests, responses):
-            self.map_response_to_current_function(request.function_name, response)
+        self.map_all_functions_to_their_responses(responses)
 
     def get_field_pair_where_values_matches(self, request_body_item):
         for response in self.function_names_and_responses.values():
-            has_index=False
+            has_index = False
 
             if len(response) != 1:
                 has_index = True
@@ -130,9 +142,9 @@ class ReplaceRequestify(RequestifyList):
 
                         if value == response_value:
                             if has_index:
-                                return_tuple = (request_field_name, field_name, index)
+                                return_tuple = (request_field_name, (field_name, index))
                             else:
-                                return_tuple = (request_field_name, field_name)
+                                return_tuple = (request_field_name, (field_name, None))
 
                             return return_tuple
 
@@ -186,94 +198,82 @@ class ReplaceRequestify(RequestifyList):
             if sought_value == value:
                 return field_name
 
-    def __create_responses_text(self, with_headers=True, with_cookies=True):
-        indent = "\t\t"
+    @staticmethod
+    def add_index_if_needed(data_string, index):
+        data_string_with_index = ""
+        if index is not None:
+            data_string_with_index = data_string + f"[{index}],"
+        else:
+            data_string_with_index = data_string + ","
 
-        requests_text = [
-            "import requests",
-            "import pprint",
-            f"from json import {JSON_ERROR_NAME}",
-            f"class {REQUESTS_CLASS_NAME}():",
-            "\tdef __init__(self):",
-            f"\t\tself.{RESPONSES_DICT_NAME} = {{}}",
-        ]
+        return data_string_with_index
 
-        for request in self.requests:
-            response = request.create_responses_base(
-                indent=indent,
-                with_headers=with_headers,
-                with_cookies=with_cookies,
+    def format_data_line(self, matching_data):
+        data_string_with_index = ""
+        data_parts = [f"data={{"]
+
+        for function_called, list_of_fields in matching_data.items():
+            for request_field, (response_field, index) in list_of_fields:
+                data_part = f"'{request_field}': {RESPONSES_DICT_NAME}['{function_called}']['{response_field}']"
+                data_string_with_index = ReplaceRequestify.add_index_if_needed(
+                    data_part, index
+                )
+
+                data_parts.append(data_string_with_index)
+
+        data_string_with_index += "}"
+        return "\n".join(data_parts)
+
+    @staticmethod
+    def replace_response_data(response_as_list, formatted_data_line, has_data=False):
+        response_with_replaced_data = response_as_list
+
+        if has_data:
+            response_with_replaced_data[2] = formatted_data_line
+
+        return response_with_replaced_data
+
+    @staticmethod
+    def replace_response_containing_data(response_as_list, formatted_data_line):
+        return ReplaceRequestify.replace_response_data(
+            response_as_list, formatted_data_line, has_data=True
+        )
+
+    @staticmethod
+    def replace_response_not_containing_data(response_as_list, formatted_data_line):
+        return ReplaceRequestify.replace_response_data(
+            response_as_list, formatted_data_line, has_data=True
+        )
+
+    def get_formatted_response(self, request):
+        base_response = super().create_base_response(request=request)
+        matching_data = self.matching_data.get(request.function_name)
+
+        data_line = self.format_data_line(matching_data=matching_data)
+        base_response[2] = data_line
+
+        if request.data:
+            formatted_response = ReplaceRequestify.replace_response_containing_data(
+                base_response, data_line
+            )
+        else:
+            formatted_response = ReplaceRequestify.replace_response_not_containing_data(
+                base_response, data_line
             )
 
-            current_function = request.function_name
-            current_matches = [
-                match
-                for match in self.matching_data
-                if match.get_current_function() == current_function
-            ]
+        pprint(formatted_response)
 
-            for match in current_matches:
-                current_called_function = match.get_called_function()
-                current_field_names = [
-                    match.get_matching_fields()
-                    for match in current_matches
-                    if match.get_called_function() == current_called_function
-                ]
+    def get_replaced_functions(self):
+        base_text = super().__create_base_response()
 
-        #     if request.data:
-        #         request_field_names = [field[0] for field in matching_fields]
-        #         response_field_names = [field[1] for field in matching_fields]
-        #
-        #         new_data = f"{indent}data = {{"
-        #         for request_field_name, response_field_name in zip(
-        #             request_field_names, response_field_names
-        #         ):
-        #             if isinstance(response_field_name, str):
-        #                 new_data += f"'{request_field_name}': self.{RESPONSES_DICT_NAME}['{function_called}']['{response_field_name}'], "
-        #             elif isinstance(response_field_name, tuple):
-        #                 new_data += f"'{request_field_name}': self.{RESPONSES_DICT_NAME}['{function_called}']['{response_field_name[0]}'][{response_field_name[1]}], "
-        #
-        #         for name, value in request.data.items():
-        #             if name not in request_field_names:
-        #                 new_data += f"'{name}': value, "
-        #
-        #         new_data += "}\n"
-        #         # if the request has a data field, in the generated response it will be the last field
-        #         response[-2] = new_data
-        #         # response[-2] = new_data
-        #
-        #     final_response = "\n".join(response)
-        #
-        #     requests_text.append(
-        #         f"\tdef {request.function_name}(self):{final_response}"
-        #     )
-        #     requests_text.append(
-        #         "\n\t\t".join(
-        #             [
-        #                 "\t\ttry:",
-        #                 f"\t{RESPONSE_VARIABLE_NAME}={REQUEST_VARIABLE_NAME}.json()",
-        #                 f"\tpprint.pprint({REQUEST_VARIABLE_NAME}.json())",
-        #                 f"except {JSON_ERROR_NAME}:",
-        #                 f"\t{RESPONSE_VARIABLE_NAME}={REQUEST_VARIABLE_NAME}.text",
-        #                 f"\tpprint.pprint({REQUEST_VARIABLE_NAME}.text)\n",
-        #             ]
-        #         )
-        #     )
-        #
-        #     requests_text.append(
-        #         f"\t\tself.{RESPONSES_DICT_NAME}['{request.function_name}']={RESPONSE_VARIABLE_NAME}"
-        #     )
-        #
-        # requests_text.append("\tdef call_all(self):")
-        # requests_text.append(
-        #     "".join(
-        #         f"\t\tself.{function_name}()\n"
-        #         for function_name in self.existing_function_names
-        #     )
-        # )
-        # requests_text.append("if __name__ == '__main__': ")
-        # requests_text.append(f"\t{REQUESTS_CLASS_NAME}().call_all()")
-        # return beautify_string("\n".join(requests_text))
+    def __create_responses_text(self, with_headers=True, with_cookies=True):
+
+        requests_text = [
+            generate_imports_text(["requests", "pprint"]),
+            generate_class(
+                REQUESTS_CLASS_NAME,
+            ),  # < should be all the functions
+        ]
 
     def __write_to_stdio(self, with_headers=True, with_cookies=True):
         requests_as_functions = self.__create_responses_text(
@@ -282,8 +282,8 @@ class ReplaceRequestify(RequestifyList):
         print(requests_as_functions)
 
     def debug(self):
-        # print(self.function_names_and_responses.items())
-        pprint.pprint(self.matching_data)
+        request = self.requests[2]
+        self.get_formatted_response(request)
 
     def to_screen(self):
         self.__write_to_stdio()
@@ -304,6 +304,7 @@ def __get_file(filename):
 def from_file(filename, replace=False):
     requests_from_file = __get_file(filename)
     assert requests_from_file, "No data in the specified file"
+
     if len(requests_from_file) == 1:
         requests = RequestifyObject(requests_from_file[0])
     else:
@@ -312,6 +313,3 @@ def from_file(filename, replace=False):
         else:
             requests = RequestifyList(requests_from_file)
     return requests
-
-
-from_file("../tests/test_files/test_data.txt", replace=True).debug()

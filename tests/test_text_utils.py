@@ -1,4 +1,4 @@
-import requestify.text_utils as text_utils
+from requestify import text_utils
 import pytest
 
 

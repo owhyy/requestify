@@ -3,9 +3,6 @@ General
 """
 
 
-from argparse import ArgumentTypeError
-
-
 def generate_imports_text(*packages):
     return [f"import {package}" for package in packages]
 
