@@ -12,6 +12,18 @@ from .utils import get_data_dict, get_netloc, beautify_string, get_json_or_text
 REQUESTS_CLASS_NAME = "RequestsTest"
 RESPONSE_VARIABLE_NAME = "response"
 REQUEST_VARIABLE_NAME = "request"
+
+# methods to be called if data flags are present
+DATA_HANDLER = {
+    "-d": lambda x: get_data_dict(x),
+    "--data": lambda x: get_data_dict(x),
+    "--data-ascii": lambda x: get_data_dict(x),
+    "--data-binary": lambda x: bytes(x, encoding="utf-8"),
+    "--data-raw": lambda x: get_data_dict(x),
+    "--data-urlencode": lambda x: parse.quote(x),
+}
+
+METHOD_REGEX = re.compile("(-X)(\s+\w+)" + "|".join(name for name in DATA_HANDLER))
 OPTS_REGEX = re.compile(
     """ (-{1,2}\S+)\s+?"([\S\s]+?)"|(-{1,2}\S+)\s+?'([\S\s]+?)'""", re.VERBOSE
 )
@@ -31,21 +43,20 @@ def format_url(url):
 
 
 def find_url_or_error(list_of_strings):
-    might_include_url = "".join(list_of_strings)
-    url = re.search(URL_REGEX, might_include_url)
-    if not url:
+    might_include_url = [
+        url_match
+        for element in list_of_strings
+        if (url_match := re.search(URL_REGEX, element))
+    ]
+    if might_include_url:
+        url = might_include_url[0].group(0)
+    else:
         raise ValueError("Could not find a url")
-    return url.group(0)
+    return url
 
 
-def remove_url_from_list_of_strings(list_of_strings):
-    url = find_url_or_error(list_of_strings)
-    list_of_strings_without_url = []
-    for string in list_of_strings:
-        if url in string:
-            continue
-        list_of_strings_without_url.append(string)
-    return list_of_strings_without_url
+def get_list_of_strings_without_url(list_of_strings, url):
+    return [s for s in list_of_strings if s != url]
 
 
 # https://stackoverflow.com/questions/5389507/iterating-over-every-two-elements-in-a-list
@@ -68,9 +79,21 @@ def uppercase_boolean_values(opts):
     return ret_opts
 
 
+def find_and_get_opts(meta: list[str]) -> list[str]:
+    # convert to string, to be able to use regex
+    might_include_opts = " ".join(meta)
+    opts = re.findall(OPTS_REGEX, might_include_opts)
+    _ = list(itertools.chain.from_iterable(opts))
+    return [option for option in _ if option]
+
+
+def split_and_flatten_list(l):
+    return list(itertools.chain.from_iterable([element.split(" ") for element in l]))
+
+
 class RequestifyObject(object):
     def __repr__(self):
-        return f"RequestifyObject{self.base_string}"
+        return f"RequestifyObject({self.base_string})"
 
     def __init__(self, base_string):
         self.base_string = " ".join(base_string.replace("\\", "").split())
@@ -79,14 +102,7 @@ class RequestifyObject(object):
         self.headers = {}
         self.cookies = {}
         self.data = dict()
-        self.__data_handler = {
-            "-d": lambda x: get_data_dict(x),
-            "--data": lambda x: get_data_dict(x),
-            "--data-ascii": lambda x: get_data_dict(x),
-            "--data-binary": lambda x: bytes(x, encoding="utf-8"),
-            "--data-raw": lambda x: get_data_dict(x),
-            "--data-urlencode": lambda x: parse.quote(x),
-        }
+
         self.function_name = ""
         self.__generate()
 
@@ -99,11 +115,7 @@ class RequestifyObject(object):
             url = meta[1]
             self.__initialize_curl_and_url_only(url)
         else:
-            meta_without_curl = meta[1:]
-            self.__set_url(meta_without_curl)
-            meta_without_url = remove_url_from_list_of_strings(meta_without_curl)
-            self.__set_method(meta_without_url)
-            self.__set_opts(meta_without_url)
+            self.__initialize_complete_request(meta[1:])
 
         self.__set_function_name()
 
@@ -114,18 +126,25 @@ class RequestifyObject(object):
         else:
             raise ValueError("Request method not specified, and is not a GET")
 
-    def __set_url(self, meta):
-        url = find_url_or_error(meta)
-        url = format_url(url)
-        self.url = url
+    def __initialize_complete_request(self, meta):
+        self.__set_url(meta)
 
-    def __set_method(self, meta):
-        list_of_things = " ".join(meta).split(" ")
-        for method, flag in pairwise(list_of_things):
+        # meta_without_url = get_list_of_strings_without_url(
+        #     split_and_flatten_list(meta), self.url
+        # )
+        self.__set_method(meta_without_url)
+        self.__set_opts(meta_without_url)
+
+    def __set_url(self, meta):
+        self.url = format_url(find_url_or_error(meta))
+
+    def __set_method(self, meta: list[str]):
+        flag_and_method = re.findall(METHOD_REGEX, meta)
+        # list_of_things = " ".join(meta).split(" ")
+        for flag, method in pairwise(list_of_things):
             if flag == "-X":
-                self.method = method
-                break
-            if flag in self.__data_handler:
+                self.method = method.lower()
+            elif flag in DATA_HANDLER:
                 if self.method == "get":
                     self.method = "post"
 
@@ -137,12 +156,10 @@ class RequestifyObject(object):
         headers = [option[1] for option in opts]
         self.__format_headers(headers)
 
-    # TODO: implement support for flags like --compressed
+    # requests does not have support for flags such as --compressed, --resolve,
+    # so there's no way to convert
     def __get_opts(self, meta):
-        might_include_opts = "".join(meta)
-        opts = re.findall(OPTS_REGEX, might_include_opts)
-        _ = list(itertools.chain.from_iterable(opts))
-        opts = [option for option in _ if option]
+        opts = find_and_get_opts(meta)
 
         assert len(opts) % 2 == 0, "Request header(s) or flag(s) missing"
         ret_opts = []
@@ -154,8 +171,8 @@ class RequestifyObject(object):
 
     def __set_body(self, opts):
         for flag, value in opts:
-            if flag in self.__data_handler:
-                self.data = self.__data_handler[flag](value)
+            if flag in DATA_HANDLER:
+                self.data = DATA_HANDLER[flag](value)
 
     def __format_headers(self, headers):
         for header in headers:
@@ -187,7 +204,6 @@ class RequestifyObject(object):
         function_name = f"{self.method}_{netloc}"
         self.function_name = function_name
 
-    # returns base as list(without imports, only the text), unbeautified string
     def create_responses_base(self, with_headers=True, with_cookies=True):
         request_options = ""
         wait_to_write = []
