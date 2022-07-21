@@ -23,7 +23,9 @@ DATA_HANDLER = {
     "--data-urlencode": lambda x: parse.quote(x),
 }
 
-METHOD_REGEX = re.compile("(-X)(\s+\w+)" + "|".join(name for name in DATA_HANDLER))
+METHOD_REGEX = re.compile(
+    f'({"|".join(name for name in DATA_HANDLER)})|(?:-X)\s+(\S\w+\S)'
+)
 OPTS_REGEX = re.compile(
     """ (-{1,2}\S+)\s+?"([\S\s]+?)"|(-{1,2}\S+)\s+?'([\S\s]+?)'""", re.VERBOSE
 )
@@ -42,17 +44,13 @@ def format_url(url):
     return url
 
 
-def find_url_or_error(list_of_strings):
-    might_include_url = [
-        url_match
-        for element in list_of_strings
-        if (url_match := re.search(URL_REGEX, element))
-    ]
+def find_url_or_error(s: str) -> str:
+    might_include_url = re.search(URL_REGEX, s)
     if might_include_url:
-        url = might_include_url[0].group(0)
+        url = might_include_url.groups(0)[0]
     else:
         raise ValueError("Could not find a url")
-    return url
+    return url  # type: ignore
 
 
 def get_list_of_strings_without_url(list_of_strings, url):
@@ -79,10 +77,8 @@ def uppercase_boolean_values(opts):
     return ret_opts
 
 
-def find_and_get_opts(meta: list[str]) -> list[str]:
-    # convert to string, to be able to use regex
-    might_include_opts = " ".join(meta)
-    opts = re.findall(OPTS_REGEX, might_include_opts)
+def find_and_get_opts(meta: str) -> list[str]:
+    opts = re.findall(OPTS_REGEX, meta)
     _ = list(itertools.chain.from_iterable(opts))
     return [option for option in _ if option]
 
@@ -115,64 +111,66 @@ class RequestifyObject(object):
             url = meta[1]
             self.__initialize_curl_and_url_only(url)
         else:
-            self.__initialize_complete_request(meta[1:])
+            self.__initialize_complete_request(" ".join(meta[1:]))
 
         self.__set_function_name()
 
-    def __initialize_curl_and_url_only(self, url):
+    def __initialize_curl_and_url_only(self, url: str) -> None:
         if re.search(URL_REGEX, url):
             self.url = url
             self.method = "get"
         else:
             raise ValueError("Request method not specified, and is not a GET")
 
-    def __initialize_complete_request(self, meta):
+    def __initialize_complete_request(self, meta: str) -> None:
         self.__set_url(meta)
+        self.__set_method(meta)
+        self.__set_opts(meta)
 
-        # meta_without_url = get_list_of_strings_without_url(
-        #     split_and_flatten_list(meta), self.url
-        # )
-        self.__set_method(meta_without_url)
-        self.__set_opts(meta_without_url)
-
-    def __set_url(self, meta):
+    def __set_url(self, meta: str) -> None:
         self.url = format_url(find_url_or_error(meta))
 
-    def __set_method(self, meta: list[str]):
-        flag_and_method = re.findall(METHOD_REGEX, meta)
-        # list_of_things = " ".join(meta).split(" ")
-        for flag, method in pairwise(list_of_things):
-            if flag == "-X":
-                self.method = method.lower()
-            elif flag in DATA_HANDLER:
+    def __set_method(self, meta: str) -> None:
+        found = re.search(METHOD_REGEX, meta)
+        if found:
+            dataflag = found.groups()[0]
+            method = found.groups()[1]
+
+            if dataflag:
                 if self.method == "get":
                     self.method = "post"
+            elif method:
+                self.method = method.strip("'").strip('"').lower()
+        else:
+            pass
+            # raise
 
-    def __set_opts(self, meta):
+    def __set_opts(self, meta: str) -> None:
         opts = self.__get_opts(meta)
         opts = uppercase_boolean_values(opts)
 
         self.__set_body(opts)
-        headers = [option[1] for option in opts]
+        headers = [option[1] for option in opts if option[0] == "-H"]
         self.__format_headers(headers)
 
     # requests does not have support for flags such as --compressed, --resolve,
     # so there's no way to convert
-    def __get_opts(self, meta):
+    def __get_opts(self, meta: str) -> list[str]:
         opts = find_and_get_opts(meta)
 
         assert len(opts) % 2 == 0, "Request header(s) or flag(s) missing"
         ret_opts = []
         for flag, data in pairwise(opts):
-            if flag == "-H":
+            if flag == "-H" or flag in DATA_HANDLER:
                 ret_opts.append((flag, data))
 
         return ret_opts
 
-    def __set_body(self, opts):
-        for flag, value in opts:
-            if flag in DATA_HANDLER:
-                self.data = DATA_HANDLER[flag](value)
+    def __set_body(self, opts: list[tuple[str]]):
+        for option in opts:
+            for flag, value in pairwise(option):
+                if flag in DATA_HANDLER:
+                    self.data = DATA_HANDLER[flag](value)
 
     def __format_headers(self, headers):
         for header in headers:
@@ -180,13 +178,12 @@ class RequestifyObject(object):
                 k, v = header.split(": ", 1)
             except ValueError:
                 print(f"invalid data: {header}")
-                pass
-                # raise
+                raise
 
-            if k.lower() == "cookie":  # type: ignore
-                self.__format_cookies(v)  # type: ignore
+            if k.lower() == "cookie":
+                self.__format_cookies(v)
             else:
-                self.headers[k] = v  # type: ignore
+                self.headers[k] = v
         return self.headers
 
     def __format_cookies(self, text):
