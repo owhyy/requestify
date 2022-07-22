@@ -11,7 +11,6 @@ from .utils import get_data_dict, get_netloc, beautify_string, get_json_or_text
 # name that will be used for class with requests
 REQUESTS_CLASS_NAME = "RequestsTest"
 RESPONSE_VARIABLE_NAME = "response"
-REQUEST_VARIABLE_NAME = "request"
 
 # methods to be called if data flags are present
 DATA_HANDLER = {
@@ -64,7 +63,6 @@ def pairwise(iterable):
     return zip(a, a)
 
 
-# prolly not working
 def uppercase_boolean_values(opts):
     ret_opts = []
     for _, value in opts:

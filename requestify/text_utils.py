@@ -1,3 +1,5 @@
+REQUEST_VARIABLE_NAME = "request"
+
 """
 General
 """
@@ -5,6 +7,34 @@ General
 
 def generate_imports_text(*packages):
     return [f"import {package}" for package in packages]
+
+
+"""
+Base text
+"""
+
+
+def generate_requestify_text(requestify, with_headers, with_cookies):
+    requestify_text = []
+    request_options = ""
+
+    if with_headers:
+        requestify_text.append(f"headers = {requestify.headers}")
+        request_options += ", headers=headers"
+
+    if with_cookies:
+        requestify_text.append(f"cookies = {requestify.cookies}")
+        request_options += ", cookies=cookies"
+
+    if requestify.data:
+        requestify_text.append(f"data = {requestify.data}")
+        request_options += ", data=data"
+
+    requestify_text.append(
+        f"{REQUEST_VARIABLE_NAME} = requests.{requestify.method}('{requestify.url}'{request_options})"
+    )
+
+    return requestify_text
 
 
 """

@@ -6,8 +6,6 @@ EBS = "https://ebs.io"
 GOOGLE = "https://google.com"
 GITHUB = "https://github.com"
 
-REQUEST_VARIABLE_NAME = "request"
-
 
 class TestMetods:
     @pytest.mark.parametrize("url", ("google.com", GOOGLE))
@@ -21,6 +19,9 @@ class TestMetods:
             (GOOGLE, GOOGLE),
             ("http://google.com", "http://google.com"),
             ("https://google.com", "https://google.com"),
+            ("www.google.com", "www.google.com"),
+            ("https://www.google.com", "https://www.google.com"),
+            ("//www.google.com", "www.google.com"),
             ("//google.com", "google.com"),
             ("oogabooga://google.com", "google.com"),
             ("has.dots.in.domain", "has.dots.in.domain"),
@@ -155,15 +156,17 @@ class TestRequestifyObject:
 
     def test_lowercase_boolean_headers(self):
         req = requestify.RequestifyObject(
-            f"""curl -X post {GOOGLE} -H 'something: false' -H 'something_else: true'"""
+            f"""curl -X post {GOOGLE} -H 'x: false' -H 'y: true'"""
         )
 
         headers = {
-            "something": "False",
-            "something_else": "True",
+            "x": "False",
+            "y": "True",
         }
 
-        self.assert_everything_matches(req=req, url=GOOGLE, method="post", data=headers)
+        self.assert_everything_matches(
+            req=req, url=GOOGLE, method="post", headers=headers
+        )
 
     def test_more_headers(self):
         req = requestify.RequestifyObject(
@@ -207,30 +210,11 @@ class TestRequestifyObject:
             data={"username": "nujabes", "password": "rip"},
         )
 
-    # Response text creation tests
-    @pytest.mark.parametrize("method", ("GET", "POST", "PUT", "PATCH", "HEAD"))
-    def test_base_response_no_headers_no_data_no_cookies(self, method):
-        req = requestify.RequestifyObject(f"curl -X {method} {GOOGLE}")
-        base_method = [
-            "headers = {}",
-            "cookies = {}",
-            f"{REQUEST_VARIABLE_NAME} = requests.{req.method}('{req.url}', headers=headers, cookies=cookies)",
-        ]
-        assert req.create_responses_base() == base_method
-
-    def test_base_response_with_headers_no_data_no_cookies(self):
-        req = requestify.RequestifyObject(
-            f"""curl -X post {GOOGLE} -H 'accept: application/json' -H 'X-CSRFToken: 1234'"""
-        )
-        base_method = [
-            """headers = {'accept: application/json', 'X-CSRFToken: 1234'}""",
-            "cookies = {}",
-            f"{REQUEST_VARIABLE_NAME} = requests.{req.method}('{req.url}', headers=headers, cookies=cookies)",
-        ]
-        assert req.create_responses_base() == base_method
-
     def test_create_beautiful_response(self):
-        pass
+        req = requestify.RequestifyObject(f"""curl -X post {GOOGLE} -H 'x: y'""")
+        beautiful = f"""
+class {CLASS_NA}
+        """
 
     def test_to_screen(self):
         pass
