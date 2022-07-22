@@ -1,40 +1,52 @@
+from __future__ import annotations
 REQUEST_VARIABLE_NAME = "request"
+
+FunctionTextType = tuple[str, list[str]]
 
 """
 General
 """
 
 
-def generate_imports_text(*packages):
+def generate_imports_text(*packages: str) -> list[str]:
     return [f"import {package}" for package in packages]
 
 
 """
-Base text
+Requestify text
 """
 
 
-def generate_requestify_text(requestify, with_headers, with_cookies):
+def generate_requestify_base_text(
+    req: RequestifyObject, with_headers=True, with_cookies=True
+) -> list[str]:
     requestify_text = []
     request_options = ""
 
     if with_headers:
-        requestify_text.append(f"headers = {requestify.headers}")
+        requestify_text.append(f"headers = {req.headers}")
         request_options += ", headers=headers"
 
     if with_cookies:
-        requestify_text.append(f"cookies = {requestify.cookies}")
+        requestify_text.append(f"cookies = {req.cookies}")
         request_options += ", cookies=cookies"
 
-    if requestify.data:
-        requestify_text.append(f"data = {requestify.data}")
+    if req.data:
+        requestify_text.append(f"data = {req.data}")
         request_options += ", data=data"
 
     requestify_text.append(
-        f"{REQUEST_VARIABLE_NAME} = requests.{requestify.method}('{requestify.url}'{request_options})"
+        f"{REQUEST_VARIABLE_NAME} = requests.{req.method}('{req.url}'{request_options})"
     )
 
     return requestify_text
+
+
+def generate_requestify_function(
+    req: RequestifyObject, with_headers=True, with_cookies=True
+) -> FunctionTextType | None:
+    request_text = generate_requestify_base_text(req, with_headers, with_cookies)
+    return generate_function_text_outside_class(req.function_name, *request_text)
 
 
 """
@@ -42,7 +54,9 @@ Function text
 """
 
 
-def __generate_function_text(function_name, *function_body, is_in_class):
+def __generate_function_text(
+    function_name: str, *function_body: str, is_in_class: bool
+) -> FunctionTextType | None:
     function_text = None
 
     if function_body:
@@ -54,7 +68,9 @@ def __generate_function_text(function_name, *function_body, is_in_class):
     return function_text
 
 
-def __generate_indented_function(function_name, *function_body, is_in_class):
+def __generate_indented_function(
+    function_name: str, *function_body: str, is_in_class: bool
+) -> FunctionTextType | None:
     function_text = __generate_function_text(
         function_name, *function_body, is_in_class=is_in_class
     )
@@ -71,17 +87,23 @@ def __generate_indented_function(function_name, *function_body, is_in_class):
     return indented_function
 
 
-def generate_function_text_inside_class(function_name, *function_body):
+def generate_function_text_inside_class(
+    function_name: str, *function_body: str
+) -> FunctionTextType | None:
     return __generate_indented_function(function_name, *function_body, is_in_class=True)
 
 
-def generate_function_text_outside_class(function_name, *function_body):
+def generate_function_text_outside_class(
+    function_name: str, *function_body: str
+) -> FunctionTextType | None:
     return __generate_indented_function(
         function_name, *function_body, is_in_class=False
     )
 
 
-def __indent_function(function, indent_amount=1):
+def __indent_function(
+    function: FunctionTextType, indent_amount=1
+) -> FunctionTextType | None:
     """
     Indent levels means indent level for body, not for first line.
     Therefore, a indent level of 1 looks like
@@ -111,12 +133,16 @@ def __indent_function(function, indent_amount=1):
     return indented_function
 
 
-def indent_function_inside_class(function_as_list):
-    return __indent_function(function_as_list, indent_amount=2)
+def indent_function_inside_class(
+    function: FunctionTextType
+) -> FunctionTextType | None:
+    return __indent_function(function, indent_amount=2)
 
 
-def indent_function_outside_class(function_as_list):
-    return __indent_function(function_as_list)
+def indent_function_outside_class(
+    function: FunctionTextType
+) -> FunctionTextType | None:
+    return __indent_function(function)
 
 
 """
@@ -124,14 +150,18 @@ Class text
 """
 
 
-def generate_class_text(class_name, *class_body):
-    indented_class_body = indent_class_body(class_body)
+def generate_class_text(
+        class_name: str, *class_body: FunctionTextType | None
+) -> tuple[str, list[FunctionTextType | None]]:
+    indented_class_body = indent_class_body(class_body) # type: list[FunctionTextType | None]
     class_text = (f"class {class_name}():", indented_class_body)
 
     return class_text
 
 
-def indent_class_body(class_body):
+def indent_class_body(
+    class_body: list[FunctionTextType]
+) -> list[FunctionTextType | None]:
     indented_class_body = [
         indent_function_inside_class(function) for function in class_body
     ]

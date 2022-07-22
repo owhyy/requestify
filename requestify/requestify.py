@@ -33,7 +33,7 @@ URL_REGEX = re.compile(
 )
 
 
-def format_url(url):
+def format_url(url: str) -> str:
     url = url.strip("'").strip('"').rstrip("/")
     if not (
         url.startswith("//") or url.startswith("http://") or url.startswith("https://")
@@ -52,7 +52,7 @@ def find_url_or_error(s: str) -> str:
     return url  # type: ignore
 
 
-def get_list_of_strings_without_url(list_of_strings, url):
+def get_list_of_strings_without_url(list_of_strings: list[str], url: str) -> list[str]:
     return [s for s in list_of_strings if s != url]
 
 
@@ -63,7 +63,7 @@ def pairwise(iterable):
     return zip(a, a)
 
 
-def uppercase_boolean_values(opts):
+def uppercase_boolean_values(opts: list[tuple[str, str]]) -> list[tuple[str, str]]:
     ret_opts = []
     for _, value in opts:
         if value.find("false") != -1:
@@ -81,7 +81,7 @@ def find_and_get_opts(meta: str) -> list[str]:
     return [option for option in _ if option]
 
 
-def split_and_flatten_list(l):
+def split_and_flatten_list(l: list[str]) -> list[str]:
     return list(itertools.chain.from_iterable([element.split(" ") for element in l]))
 
 
@@ -89,7 +89,7 @@ class RequestifyObject(object):
     def __repr__(self):
         return f"RequestifyObject({self.base_string})"
 
-    def __init__(self, base_string):
+    def __init__(self, base_string: str) -> None:
         self.base_string = " ".join(base_string.replace("\\", "").split())
         self.url = ""
         self.method = "get"
@@ -100,7 +100,7 @@ class RequestifyObject(object):
         self.function_name = ""
         self.__generate()
 
-    def __generate(self):
+    def __generate(self) -> None:
         meta = self.base_string.split(" ", 2)
         assert len(meta) > 1, "No URL provided"
         assert meta[0] == "curl", "Not a valid cURL request"
@@ -146,31 +146,29 @@ class RequestifyObject(object):
     def __set_opts(self, meta: str) -> None:
         opts = self.__get_opts(meta)
         opts = uppercase_boolean_values(opts)
-
         self.__set_body(opts)
+
         headers = [option[1] for option in opts if option[0] == "-H"]
-        self.__format_headers(headers)
+        self.__set_headers(headers)
 
     # requests does not have support for flags such as --compressed, --resolve,
     # so there's no way to convert
-    def __get_opts(self, meta: str) -> list[str]:
+    def __get_opts(self, meta: str) -> list[tuple[str, str]]:
         opts = find_and_get_opts(meta)
-
         assert len(opts) % 2 == 0, "Request header(s) or flag(s) missing"
-        ret_opts = []
-        for flag, data in pairwise(opts):
-            if flag == "-H" or flag in DATA_HANDLER:
-                ret_opts.append((flag, data))
+        return [
+            (flag, data)
+            for flag, data in pairwise(opts)
+            if flag == "-H" or flag in DATA_HANDLER
+        ]
 
-        return ret_opts
-
-    def __set_body(self, opts: list[tuple[str]]):
+    def __set_body(self, opts: list[tuple[str, str]]) -> None:
         for option in opts:
             for flag, value in pairwise(option):
                 if flag in DATA_HANDLER:
                     self.data = DATA_HANDLER[flag](value)
 
-    def __format_headers(self, headers):
+    def __set_headers(self, headers: list[str]) -> None:
         for header in headers:
             try:
                 k, v = header.split(": ", 1)
@@ -179,12 +177,11 @@ class RequestifyObject(object):
                 raise
 
             if k.lower() == "cookie":
-                self.__format_cookies(v)
+                self.__set_cookie(v)
             else:
                 self.headers[k] = v
-        return self.headers
 
-    def __format_cookies(self, text):
+    def __set_cookie(self, text: str) -> None:
         cookies = text.split("; ")
         for cookie in cookies:
             try:
@@ -192,42 +189,11 @@ class RequestifyObject(object):
                 self.cookies[k] = v
             except ValueError:
                 raise
-        return self.cookies
 
-    def __set_function_name(self):
+    def __set_function_name(self) -> None:
         netloc = get_netloc(self.url)
         function_name = f"{self.method}_{netloc}"
         self.function_name = function_name
-
-    def create_responses_base(self, with_headers=True, with_cookies=True):
-        request_options = ""
-        wait_to_write = []
-        if with_headers:
-            wait_to_write.append(f"headers = {self.headers}")
-            request_options += ", headers=headers"
-
-        if with_cookies:
-            wait_to_write.append(f"cookies = {self.cookies}")
-            request_options += ", cookies=cookies"
-
-        if self.data:
-            wait_to_write.append(f"data = {self.data}")
-            request_options += ", data=data"
-
-        wait_to_write.append(
-            f"{REQUEST_VARIABLE_NAME} = requests.{self.method}('{self.url}'{request_options})"
-        )
-
-        return wait_to_write
-
-    def create_beautiful_response(self, with_headers=True, with_cookies=True):
-        response = "\n".join(self.create_responses_base(with_headers, with_cookies))
-        wait_to_write = [
-            "import requests",
-            response,
-        ]
-
-        return beautify_string("\n".join(wait_to_write))
 
     def __write_to_file(self, file, with_headers=True, with_cookies=True):
         request = self.create_beautiful_response(with_headers, with_cookies)
