@@ -1118,3 +1118,11 @@ curl 'https://primecapital.md/favico.ico' \
   -H 'Accept-Language: en-US,en;q=0.9' \
   -H 'Cookie: PHPSESSID=e2b1f99af7e71adeaf125b0bd22a2607' \
   --compressed
+
+
+
+TEST_DATA
+---------
+curl -X GET "http://127.0.0.1:8000/tasks/1/comments" -H  "accept: application/json" -H  "X-CSRFToken: 9TdscZksM2tpDCHihgjKHJMCRiXe3E71ROFjVBZeVWJM9qXAF0a5clUcixzrhtlm"
+curl -X GET "http://127.0.0.1:8000/tasks" -H  "accept: application/json" -H  "X-CSRFToken: 9TdscZksM2tpDCHihgjKHJMCRiXe3E71ROFjVBZeVWJM9qXAF0a5clUcixzrhtlm"
+curl -X PATCH "http://127.0.0.1:8000/tasks/1/assign" -H  "accept: application/json" -H  "Content-Type: application/json" -H  "X-CSRFToken: SOaPsKJazZzodzkSc01w58C9Vku7n3YF5FoZR2x0FMS68SjU8v3RlxWRo35vIOqz" -d "{  'owner': 2, 'somefield': 1, 'someotherfield': 5 }" --compressed;

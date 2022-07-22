@@ -1,8 +1,10 @@
-from requestify import text_utils
-from requestify.requestify import RequestifyObject
 import pytest
+from requestify.models import RequestifyObject
+from requestify import text_utils
 
 REQUEST_VARIABLE_NAME = "request"
+GOOGLE = "https://google.com"
+
 
 @pytest.fixture
 def unindented_function():
@@ -20,25 +22,41 @@ class TestTextUtils:
     def test_generate_imports_no_args(self):
         assert len(text_utils.generate_imports_text()) == 0
 
-
-    @pytest.mark.parametrize("method", ("GET", "POST", "PUT", "PATCH", "HEAD"))
-    def test_base_response_no_headers_no_data_no_cookies(self, method):
-        req = RequestifyObject(f"curl -X {method} 'https://google.com'")
-        base_method = [
-            "headers = {}",
-            "cookies = {}",
-            f"{REQUEST_VARIABLE_NAME} = requests.{req.method}('{req.url}', headers=headers, cookies=cookies)",
-        ]
-        assert text_utils.generate_requestify_text(req, True, True) == base_method
-
-    def test_base_response_with_headers_no_data_no_cookies(self):
-        req = RequestifyObject(f"""curl -X post 'https://google.com' -H 'x: y'""")
-        base_method = [
+    def test_base_response_with_headers_with_cookies(self):
+        req = RequestifyObject(f"""curl -X post '{GOOGLE}' -H 'x: y'""")
+        base_response_text = [
             "headers = {'x': 'y'}",
             "cookies = {}",
             f"{REQUEST_VARIABLE_NAME} = requests.{req.method}('{req.url}', headers=headers, cookies=cookies)",
         ]
-        assert req.create_responses_base() == base_method
+        assert (
+            text_utils.generate_requestify_base_text(req, True, True)
+            == base_response_text
+        )
+
+    def test_base_response_no_headers_no_cookies(self):
+        req = RequestifyObject(f"curl -X GET '{GOOGLE}'")
+        base_response_text = [
+            f"{REQUEST_VARIABLE_NAME} = requests.get('{GOOGLE}')",
+        ]
+        assert (
+            text_utils.generate_requestify_base_text(
+                req, with_headers=False, with_cookies=False
+            )
+            == base_response_text
+        )
+
+    def test_generate_requestify_function(self):
+        req = RequestifyObject(f"curl -X GET '{GOOGLE}'")
+        text = (
+            f"def {req.function_name}():",
+            [
+                "\theaders = {}",
+                "\tcookies = {}",
+                f"\t{REQUEST_VARIABLE_NAME} = requests.get('{GOOGLE}', headers=headers, cookies=cookies)",
+            ],
+        )
+        assert text_utils.generate_requestify_function(req) == text
 
     def test_generate_function_text_inside_class(self):
         function_in_class = (

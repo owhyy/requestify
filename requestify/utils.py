@@ -1,5 +1,7 @@
+from __future__ import annotations
 from typing import Any
 import httpx
+import itertools
 import asyncio
 import requests
 import json
@@ -7,12 +9,86 @@ import re
 from black import format_str, FileMode
 from urllib import parse
 
-from requestify.requestify import RequestifyObject
+# name that will be used for class with requests
+REQUESTS_CLASS_NAME = "RequestsTest"
+RESPONSE_VARIABLE_NAME = "response"
+
+# methods to be called if data flags are present
+DATA_HANDLER = {
+    "-d": lambda x: get_data_dict(x),
+    "--data": lambda x: get_data_dict(x),
+    "--data-ascii": lambda x: get_data_dict(x),
+    "--data-binary": lambda x: bytes(x, encoding="utf-8"),
+    "--data-raw": lambda x: get_data_dict(x),
+    "--data-urlencode": lambda x: parse.quote(x),
+}
+
+METHOD_REGEX = re.compile(
+    f'({"|".join(name for name in DATA_HANDLER)})|(?:-X)\s+(\S\w+\S)'
+)
+OPTS_REGEX = re.compile(
+    """ (-{1,2}\S+)\s+?"([\S\s]+?)"|(-{1,2}\S+)\s+?'([\S\s]+?)'""", re.VERBOSE
+)
+URL_REGEX = re.compile(
+    "((?:(?<=[^a-zA-Z0-9]){0,}(?:(?:https?\:\/\/){0,1}(?:[a-zA-Z0-9\%]{1,}\:[a-zA-Z0-9\%]{1,}[@]){,1})(?:(?:\w{1,}\.{1}){1,5}(?:(?:[a-zA-Z]){1,})|(?:[a-zA-Z]{1,}\/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\:[0-9]{1,4}){1})){1}(?:(?:(?:\/{0,1}(?:[a-zA-Z0-9\-\_\=\-]){1,})*)(?:[?][a-zA-Z0-9\=\%\&\_\-]{1,}){0,1})(?:\.(?:[a-zA-Z0-9]){0,}){0,1})"
+)
+
+
+def format_url(url: str) -> str:
+    url = url.strip("'").strip('"').rstrip("/")
+    if not (
+        url.startswith("//") or url.startswith("http://") or url.startswith("https://")
+    ):
+        url = "https://" + url  # good enough
+
+    return url
+
+
+def find_url_or_error(s: str) -> str:
+    might_include_url = re.search(URL_REGEX, s)
+    if might_include_url:
+        url = might_include_url.groups(0)[0]
+    else:
+        raise ValueError("Could not find a url")
+    return url  # type: ignore
+
+
+def get_list_of_strings_without_url(list_of_strings: list[str], url: str) -> list[str]:
+    return [s for s in list_of_strings if s != url]
+
+
+# https://stackoverflow.com/questions/5389507/iterating-over-every-two-elements-in-a-list
+def pairwise(iterable):
+    "s -> (s0, s1), (s2, s3), (s4, s5), ..."
+    a = iter(iterable)
+    return zip(a, a)
+
+
+def uppercase_boolean_values(opts: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    ret_opts = []
+    for _, value in opts:
+        if value.find("false") != -1:
+            value = value.replace("false", "False")
+        if value.find("true") != -1:
+            value = value.replace("true", "True")
+        ret_opts.append((_, value))
+
+    return ret_opts
+
+
+def find_and_get_opts(meta: str) -> list[str]:
+    opts = re.findall(OPTS_REGEX, meta)
+    _ = list(itertools.chain.from_iterable(opts))
+    return [option for option in _ if option]
+
+
+def split_and_flatten_list(l: list[str]) -> list[str]:
+    return list(itertools.chain.from_iterable([element.split(" ") for element in l]))
 
 
 def get_json_or_text(
     request: requests.models.Response | httpx._models.Response,
-) -> Any | str:
+) -> Any:
     response = ""
     try:
         response = request.json()
@@ -22,7 +98,7 @@ def get_json_or_text(
     return response
 
 
-async def __get_response_async(
+async def _get_response_async(
     requestify_object: RequestifyObject,
 ) -> httpx._models.Response:
     async with httpx.AsyncClient() as client:
@@ -37,7 +113,7 @@ async def __get_response_async(
     return response
 
 
-async def __get_responses_async(
+async def _get_responses_async(
     requestify_list: list[RequestifyObject],
 ) -> tuple[httpx._models.Response]:
     async with httpx.AsyncClient() as client:
@@ -55,7 +131,7 @@ async def __get_responses_async(
     return responses
 
 
-def __get_response_requests(
+def _get_response_requests(
     requestify_object: RequestifyObject,
 ) -> requests.models.Response:
     response = requests.request(
@@ -69,31 +145,31 @@ def __get_response_requests(
     return response
 
 
-def __get_responses_requests(
+def _get_responses_requests(
     requestify_list: list[RequestifyObject],
 ) -> list[requests.models.Response]:
     return [
-        __get_response_requests(requestify_object)
+        _get_response_requests(requestify_object)
         for requestify_object in requestify_list
     ]
 
 
 def get_response(requestify_object: RequestifyObject) -> Any | str:
     try:
-        response = asyncio.run(__get_response_async(requestify_object))
+        response = asyncio.run(_get_response_async(requestify_object))
     except TimeoutError:
         print("Async call failed. Using synchronous requests instead")
-        response = __get_response_requests(requestify_object)
+        response = _get_response_requests(requestify_object)
 
     return get_json_or_text(response)
 
 
-def get_responses(requestify_list: list[RequestifyObject]) -> list[Any | str]:
+def get_responses(requestify_list: list[RequestifyObject]) -> list[Any]:
     try:
-        responses = asyncio.run(__get_responses_async(requestify_list))
+        responses = asyncio.run(_get_responses_async(requestify_list))
     except TimeoutError:
         print("Async call failed. Using synchronous requests instead")
-        responses = __get_responses_requests(requestify_list)
+        responses = _get_responses_requests(requestify_list)
 
     return [get_json_or_text(response) for response in responses]
 

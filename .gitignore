@@ -7,3 +7,6 @@ test.py
 venv
 tags
 curls
+.coveragerc
+.coverage
+try.py

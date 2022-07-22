@@ -1,7 +1,7 @@
 import argparse
 import pyperclip
 import sys
-from requestify import RequestifyList, RequestifyObject
+from requestify.models import RequestifyList, RequestifyObject
 from replace import ReplaceRequestify
 import replace
 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     # with cProfile.Profile() as pr:
     # replace.from_file('../tests/test_files/test_data.txt').generate_workflow()
     # replace.from_file('../tests/test_files/test_data.txt').generate_workflow_async()
-    from_file("../tests/test_files/test_data.txt", replace=True).to_screen()
+    from_file("../tests/test_files/test_data.txt", replace=True).debug()
 
     # stats = pstats.Stats(pr)
     # stats.sort_stats(pstats.SortKey.TIME)
