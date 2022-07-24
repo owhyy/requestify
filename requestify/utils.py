@@ -53,7 +53,7 @@ def find_url_or_error(s: str) -> str:
     return url  # type: ignore
 
 
-def get_list_of_strings_without_url(list_of_strings: list[str], url: str) -> list[str]:
+def get_strings_without_url(url: str, list_of_strings: list[str]) -> list[str]:
     return [s for s in list_of_strings if s != url]
 
 
@@ -82,21 +82,28 @@ def find_and_get_opts(meta: str) -> list[str]:
     return [option for option in _ if option]
 
 
-def split_and_flatten_list(l: list[str]) -> list[str]:
+def split_list(l: list[str]) -> list[str]:
     return list(itertools.chain.from_iterable([element.split(" ") for element in l]))
 
 
-def get_json_or_text(
-    request: requests.models.Response | httpx._models.Response,
-) -> Any:
-    response = ""
+def get_response(requestify_object: RequestifyObject) -> Any | str:
     try:
-        response = request.json()
-    except json.JSONDecodeError:
-        response = request.text
+        response = asyncio.run(_get_response_async(requestify_object))
+    except TimeoutError:
+        print("Async call failed. Using synchronous requests instead")
+        response = _get_response_requests(requestify_object)
 
-    return response
+    return get_json_or_text(response)
 
+
+def get_responses(requestify_list: list[RequestifyObject]) -> list[Any]:
+    try:
+        responses = asyncio.run(_get_responses_async(requestify_list))
+    except TimeoutError:
+        print("Async call failed. Using synchronous requests instead")
+        responses = _get_responses_requests(requestify_list)
+
+    return [get_json_or_text(response) for response in responses]
 
 async def _get_response_async(
     requestify_object: RequestifyObject,
@@ -153,25 +160,16 @@ def _get_responses_requests(
         for requestify_object in requestify_list
     ]
 
-
-def get_response(requestify_object: RequestifyObject) -> Any | str:
+def get_json_or_text(
+    request: requests.models.Response | httpx._models.Response,
+) -> Any:
+    response = ""
     try:
-        response = asyncio.run(_get_response_async(requestify_object))
-    except TimeoutError:
-        print("Async call failed. Using synchronous requests instead")
-        response = _get_response_requests(requestify_object)
+        response = request.json()
+    except json.JSONDecodeError:
+        response = request.text
 
-    return get_json_or_text(response)
-
-
-def get_responses(requestify_list: list[RequestifyObject]) -> list[Any]:
-    try:
-        responses = asyncio.run(_get_responses_async(requestify_list))
-    except TimeoutError:
-        print("Async call failed. Using synchronous requests instead")
-        responses = _get_responses_requests(requestify_list)
-
-    return [get_json_or_text(response) for response in responses]
+    return response
 
 
 # TODO: test this, improve comment
