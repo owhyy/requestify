@@ -93,7 +93,8 @@ def get_response(requestify_object: RequestifyObject) -> Any | str:
         print("Async call failed. Using synchronous requests instead")
         response = _get_response_requests(requestify_object)
 
-    return get_json_or_text(response)
+    response_data = get_json_or_text(response)
+    return response_data
 
 
 def get_responses(requestify_list: list[RequestifyObject]) -> list[Any]:

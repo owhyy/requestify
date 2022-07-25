@@ -10,9 +10,6 @@ from requestify import utils
 RESPONSES_DICT_NAME = "workflow"
 JSON_ERROR_NAME = "JSONDecodeError"
 
-RequestDataType = dict[str, Any]
-ResponseDataType = RequestDataType | list[RequestDataType]
-
 
 class RequestifyObject(object):
     def __str__(self):
@@ -196,18 +193,22 @@ class RequestifyList(object):
             self.existing_function_names[base_function_name] += 1
 
 
+RequestDataType = dict[str, Any]
+ResponseDataType = str | RequestDataType | list[RequestDataType]
+
+
 class ReplaceRequestify(RequestifyList):
     def __init__(self, *curls):
         super().__init__(*curls)
 
         # the name of the function data it produced
         self.function_names_and_their_responses: dict[str, ResponseDataType] = {}
-        self.matching_data = {}
+        self.matching_data: dict[str, dict[str, tuple[str, int | None]]] = {}
         # self.matching_headers = {}
 
-        self.__generate()
+        self._generate()
 
-    def __generate(self) -> None:
+    def _generate(self) -> None:
         # self.init_first_response()
         self.initialize_responses_dict()
         self.initialize_matching_data()
@@ -220,15 +221,7 @@ class ReplaceRequestify(RequestifyList):
 
     def map_all_functions_to_their_responses(self, responses: list[Any]) -> None:
         for request, response in zip(self.requests, responses):
-            self.map_response_to_current_function(request.function_name, response)
-
-    def map_response_to_current_function(
-        self, function_name: str, response: Any
-    ) -> None:
-        if not isinstance(response, str):
-            self.function_names_and_their_responses[
-                function_name
-            ] = response
+            self.function_names_and_their_responses[request.function_name] = response
 
     def initialize_matching_data(self) -> None:
         for request in self.requests:
@@ -238,12 +231,14 @@ class ReplaceRequestify(RequestifyList):
                 matching_data = self.get_functions_and_fields_matching_request_body(
                     request_body
                 )
-                self.matching_data[current_function] = matching_data
+                if matching_data:
+                    self.matching_data[current_function] = matching_data
 
     def get_functions_and_fields_matching_request_body(
         self, request_body: dict[str, str]
     ) -> dict[str, tuple[str, int | None]]:
-        matching_functions_and_fields = defaultdict(list)
+        matching_functions_and_fields = {}
+        list_of_matching_data = []
 
         for request_body_item in request_body.items():
             # 0 is name of field (content-type, Accept, ...), 1 is value (application/json, */*, ...)
@@ -251,26 +246,37 @@ class ReplaceRequestify(RequestifyList):
             value = request_body_item[1]
 
             function_name = self.get_function_producing_this_value(value)
-            matching_data = (field_name, self.get_data_matching_value(value))
+            if function_name:
+                matching_data = (field_name, self.get_data_matching_value(value))
 
-            if function_name and matching_data:
-                matching_functions_and_fields[function_name].append(matching_data)
+                if matching_data:
+                    list_of_matching_data.append(matching_data)
 
+                if len(list_of_matching_data) > 1:
+                    matching_functions_and_fields[function_name] = list_of_matching_data
+                else:
+                    matching_functions_and_fields[
+                        function_name
+                    ] = list_of_matching_data[0]
         return matching_functions_and_fields
 
     def get_function_producing_this_value(self, value: str) -> str | None:
-        for function_name, response_data in self.function_names_and_their_responses.items():
+        for (
+            function_name,
+            response_data,
+        ) in self.function_names_and_their_responses.items():
             if self.is_found_in_data(value, response_data):
                 return function_name
 
     @staticmethod
-    def is_found_in_data(
-        value: str, data: dict[str, str] | list[dict[str, str]]
-    ) -> bool:
-        for response in data:
-            values = list(response.values())
-            if value in values:
-                return True
+    def is_found_in_data(value: str, data: ResponseDataType) -> bool:
+        if isinstance(data, dict):
+            return value in data.values()
+        elif isinstance(data, list):
+            for response in data:
+                return ReplaceRequestify.is_found_in_data(value, response)
+        else:
+            return data == value
 
         return False
 
@@ -289,21 +295,26 @@ class ReplaceRequestify(RequestifyList):
 
     @staticmethod
     def get_field_name_and_index_where_values_match(
-        value: str, response: dict[str, str] | list[dict[str, str]], has_index=True
+        value: str, response: ResponseDataType, has_index=True
     ) -> tuple[str, int | None] | None:
-        for index, data_dict in enumerate(response):
-            if data_dict:
-                for field_name, response_value in data_dict.items():
-                    # request_field_name = request_body_item[0]
-                    # value = request_body_item[1]
-                    #
-                    if value == response_value:
-                        if has_index:
-                            return_tuple = (request_field_name, (field_name, index))
-                        else:
-                            return_tuple = (request_field_name, (field_name, None))
+        return_tuple = None
+        if isinstance(response, dict):
+            for field_name, response_value in response.items():
+                if value == response_value:
+                    return_tuple = (field_name, None)
+        elif isinstance(response, list):
+            for index, data_dict in enumerate(response):
+                if data_dict:
+                    for field_name, response_value in data_dict.items():
+                        if value == response_value:
+                            if has_index:
+                                return_tuple = (field_name, index)
+                            else:
+                                return_tuple = (field_name, None)
 
-                        return return_tuple
+        else:
+            return_tuple = None
+        return return_tuple
 
     # def init_first_response(self):
     #     for requestify_object in self.requests:

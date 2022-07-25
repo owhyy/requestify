@@ -1,4 +1,6 @@
 import pytest
+
+from requestify.utils import get_json_or_text, get_response
 from requestify.models import ReplaceRequestify, RequestifyObject, RequestifyList
 
 EBS = "https://ebs.io"
@@ -6,7 +8,7 @@ GOOGLE = "https://google.com"
 GITHUB = "https://github.com"
 
 
-class TestModels:
+class TestRequestifyObject:
     # TODO: come up with a better name
     def assert_everything_matches(
         self, req, url=None, method=None, headers={}, data={}, cookies={}
@@ -124,6 +126,10 @@ class TestModels:
             data={"username": "nujabes", "password": "rip"},
         )
 
+    # TODO: add tests for different DATA_HANDLER flags
+
+
+class TestRequestifyList(object):
     def test_list_generation(self):
         r1 = f"curl -X GET {GOOGLE}"
         r2 = f"curl -X GET {GITHUB}"
@@ -152,16 +158,91 @@ class TestModels:
             "post_github_com": 1,
         }
 
-    def test_replace_one_request(self):
+
+class TestReplaceRequestify(object):
+    # we do this so we don't have to make requests for every test,
+    # as it is both - slow and requires internet access
+    def mock_get_responses(self, mocker):
+        mocker.patch(
+            "requestify.models.utils.get_responses",
+            return_value=[{"data": 1}],
+        )
+
+    def test_replace_one_request(self, mocker):
+        self.mock_get_responses(mocker)
+        curl = f"curl -X GET {GOOGLE}"
+        r = ReplaceRequestify(curl)
+        assert r.requests == [RequestifyObject(curl)]
+        assert r.function_names_and_their_responses == {"get_google_com": {"data": 1}}
+        assert r.matching_data == {}
+
+    def test_replace_requests_no_data_to_replace(self, mocker):
+        mocker.patch(
+            "requestify.models.utils.get_responses",
+            #               GET          POST
+            return_value=[{"foo": "bar"}, {"foo": "xyz"}],
+        )
+        curl = f"curl -X GET {GOOGLE}"
+        nodata_curl = f"curl -X POST {GOOGLE}"
+        r = ReplaceRequestify(curl, nodata_curl)
+        assert r.function_names_and_their_responses == {
+            "get_google_com": {"foo": "bar"},
+            "post_google_com": {"foo": "xyz"},
+        }
+        assert r.matching_data == {}
+
+    def test_initialize_responses_dict(self, mocker):
+        self.mock_get_responses(mocker)
         r = f"curl -X GET {GOOGLE}"
-        assert ReplaceRequestify(r).requests[0] == RequestifyObject(r)
+        mocker.patch("tests.test_models.get_response", return_value={"data": 1})
+        response = get_response(RequestifyObject(r))
+        rr = ReplaceRequestify(r)
+        assert rr.function_names_and_their_responses == {"get_google_com": {"data": 1}}
 
-    def initialize_responses_dict(self):
-        pass
+    def test_has_matching_null_data(self, mocker):
+        mocker.patch(
+            "requestify.models.utils.get_responses",
+            #               GET          POST
+            return_value=[{"data": None}, {"something": None}],
+        )
+        r1 = f"curl -X GET {GOOGLE}"
+        r2 = f"""curl -X POST -d '{{"data": None"}}' {GOOGLE}"""
+        rr = ReplaceRequestify(r1, r2)
+        assert rr.matching_data == {}
 
-    def test_replace_requests_no_data_to_replace(self):
-        r = f"curl -X GET {GOOGLE}"
-        nd_r = f"curl -X POST {GITHUB}"
+    def test_has_matching_data_dict(self, mocker):
+        mocker.patch(
+            "requestify.models.utils.get_responses",
+            #               GET          POST
+            return_value=[{"data": 1}, {"something": 1}],
+        )
+        r1 = f"curl -X GET {GOOGLE}"
+        r2 = f"""curl -X POST -d '{{"data": 1}}' {GOOGLE}"""
+        rr = ReplaceRequestify(r1, r2)
+        assert rr.matching_data == {
+            "post_google_com": {"get_google_com": ("data", None)}
+        }
 
-        robj = ReplaceRequestify(r, nd_r)
-        assert robj.requests[1].data == {} == RequestifyObject(nd_r).data
+    def test_has_matching_data_list(self, mocker):
+        mocker.patch(
+            "requestify.models.utils.get_responses",
+            #               GET                  POST
+            return_value=[{"data": [1, 2, 3]}, {"something": [1, 2, 3]}],
+        )
+        r1 = f"curl -X GET {GOOGLE}"
+        r2 = f"""curl -X POST -d '{{"data": [1, 2, 3]}}' {GOOGLE}"""
+        rr = ReplaceRequestify(r1, r2)
+        assert rr.matching_data == {
+            "post_google_com": {"get_google_com": ("data", None)}
+        }
+
+    def test_has_matching_data_string(self, mocker):
+        mocker.patch(
+            "requestify.models.utils.get_responses",
+            #               GET          POST
+            return_value=["foo", "foo"],
+        )
+        r1 = f"curl -X GET {GOOGLE}"
+        r2 = f"""curl -X POST -d '{{"data": [1, 2, 3]}}' {GOOGLE}"""
+        rr = ReplaceRequestify(r1, r2)
+        assert rr.matching_data == {}
