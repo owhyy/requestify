@@ -201,7 +201,7 @@ class _ReplaceRequestify(_RequestifyList):
 
         # the name of the function data it produced
         self._function_names_and_their_responses: dict[str, ResponseDataType] = {}
-        self._matching_data: dict[str, dict[str, tuple[str, int | None]]] = {}
+        self._matching_data: dict[str, str] = {}
         # self.matching_headers = {}
         self._initialize_responses_dict()
         self._initialize_matching_data()
@@ -217,35 +217,47 @@ class _ReplaceRequestify(_RequestifyList):
             request_body = request._data
             current_function = request._function_name
             if request_body:
-                matching_data = self._get_functions_and_fields_matching_request_body(
-                    request_body
-                )
-                if matching_data:
-                    self._matching_data[current_function] = matching_data
+                (
+                    response_function_name,
+                    request_field_name,
+                    response_field,
+                    response_index,
+                ) = self._get_matching_data(request_body)
 
-    def _get_functions_and_fields_matching_request_body(
+                if response_function_name and request_field_name and response_field:
+                    key = f"{current_function}['{request_field_name}']"
+                    if response_index:
+                        matching_data = f"{response_function_name}['{response_field}'][{response_index}]"
+                    else:
+                        matching_data = f"{response_function_name}['{response_field}']"
+                    self._matching_data[key] = matching_data
+
+    def _get_matching_data(
         self, request_body: dict[str, str]
-    ) -> dict[str, tuple[str, int | None]]:
-        matching_functions_and_fields = {}
-        list_of_matching_data = []
+    ) -> tuple[str, str, str, int | None] | None:
+        # list_of_matching_data = []
+        matching_data = None
 
         for request_body_item in request_body.items():
             field_name, value = request_body_item
-
             function_name = self._get_function_producing_this_value(value)
             if function_name:
-                matching_data = (field_name, self._get_data_matching_value(value))
+                # TODO: test this
+                response_field, index = self._get_field_and_index(value)
 
-                if matching_data:
-                    list_of_matching_data.append(matching_data)
+                if response_field:
+                    matching_data = (function_name, field_name, response_field, index)
 
-                if len(list_of_matching_data) > 1:
-                    matching_functions_and_fields[function_name] = list_of_matching_data
-                else:
-                    matching_functions_and_fields[
-                        function_name
-                    ] = list_of_matching_data[0]
-        return matching_functions_and_fields
+        return matching_data
+        #             list_of_matching_data.append(matching_data)
+        #
+        #         if len(list_of_matching_data) > 1:
+        #             matching_functions_and_fields[function_name] = list_of_matching_data
+        #         else:
+        #             matching_functions_and_fields[
+        #                 function_name
+        #             ] = list_of_matching_data[0]
+        # return matching_functions_and_fields
 
     def _get_function_producing_this_value(self, value: str) -> str | None:
         for (
@@ -267,7 +279,7 @@ class _ReplaceRequestify(_RequestifyList):
 
         return False
 
-    def _get_data_matching_value(self, value: str) -> tuple[str, int | None] | None:
+    def _get_field_and_index(self, value: str) -> tuple[str, int | None] | None:
         for response in self._function_names_and_their_responses.values():
             # if the response is a list, add index to tuple
             if isinstance(response, list):
