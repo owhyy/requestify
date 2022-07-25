@@ -11,90 +11,88 @@ RESPONSES_DICT_NAME = "workflow"
 JSON_ERROR_NAME = "JSONDecodeError"
 
 
-class RequestifyObject(object):
+class _RequestifyObject(object):
     def __str__(self):
-
-        return self.function_name
+        return self._function_name
 
     def __repr__(self):
-        return f"RequestifyObject({self.base_string})"
+        return f"RequestifyObject({self._base_string})"
 
     # used for easier testing
     def __eq__(self, other):
         return (
-            self.base_string == other.base_string
-            and self.url == other.url
-            and self.method == other.method
-            and self.cookies == other.cookies
-            and self.data == other.data
-            and self.function_name == other.function_name
+            self._base_string == other._base_string
+            and self._url == other._url
+            and self._method == other._method
+            and self._cookies == other._cookies
+            and self._data == other._data
+            and self._function_name == other._function_name
         )
 
     def __init__(self, base_string: str) -> None:
-        self.base_string = " ".join(base_string.replace("\\", "").split())
-        self.url = ""
-        self.method = "get"
-        self.headers = {}
-        self.cookies = {}
-        self.data: RequestDataType = dict()
+        self._base_string = " ".join(base_string.replace("\\", "").split())
+        self._url = ""
+        self._method = "get"
+        self._headers = {}
+        self._cookies = {}
+        self._data: RequestDataType = dict()
 
-        self.function_name = ""
-        self.__generate()
+        self._function_name = ""
+        self._generate()
 
-    def __generate(self) -> None:
-        meta = self.base_string.split(" ", 2)
+    def _generate(self) -> None:
+        meta = self._base_string.split(" ", 2)
         assert len(meta) > 1, "No URL provided"
         assert meta[0] == "curl", "Not a valid cURL request"
 
         if len(meta) == 2:
             url = meta[1]
-            self.__initialize_curl_and_url_only(url)
+            self._initialize_curl_and_url_only(url)
         else:
-            self.__initialize_complete_request(" ".join(meta[1:]))
+            self._initialize_complete_request(" ".join(meta[1:]))
 
-        self.__set_function_name()
+        self._set_function_name()
 
-    def __initialize_curl_and_url_only(self, url: str) -> None:
+    def _initialize_curl_and_url_only(self, url: str) -> None:
         if re.search(utils.URL_REGEX, url):
-            self.url = url
-            self.method = "get"
+            self._url = url
+            self._method = "get"
         else:
             raise ValueError("Request method not specified, and is not a GET")
 
-    def __initialize_complete_request(self, meta: str) -> None:
-        self.__set_url(meta)
-        self.__set_method(meta)
-        self.__set_opts(meta)
+    def _initialize_complete_request(self, meta: str) -> None:
+        self._set_url(meta)
+        self._set_method(meta)
+        self._set_opts(meta)
 
-    def __set_url(self, meta: str) -> None:
-        self.url = utils.format_url(utils.find_url_or_error(meta))
+    def _set_url(self, meta: str) -> None:
+        self._url = utils.format_url(utils.find_url_or_error(meta))
 
-    def __set_method(self, meta: str) -> None:
-        found = re.search(utils.METHOD_REGEX, meta)
+    def _set_method(self, meta: str) -> None:
+        found = utils.find_method(meta)
         if found:
-            dataflag = found.groups()[0]
-            method = found.groups()[1]
+            dataflag, method = found.groups()
 
             if dataflag:
-                if self.method == "get":
-                    self.method = "post"
+                if self._method == "get":
+                    self._method = "post"
             elif method:
-                self.method = method.strip("'").strip('"').lower()
+                self._method = method.strip("'").strip('"').lower()
         else:
             pass
             # raise
 
-    def __set_opts(self, meta: str) -> None:
-        opts = self.__get_opts(meta)
+    def _set_opts(self, meta: str) -> None:
+        opts = self._get_opts(meta)
         opts = utils.uppercase_boolean_values(opts)
-        self.__set_body(opts)
+        self._set_body(opts)
 
         headers = [option[1] for option in opts if option[0] == "-H"]
-        self.__set_headers(headers)
+        self._set_headers(headers)
 
     # requests does not have support for flags such as --compressed, --resolve,
     # so there's no way to convert
-    def __get_opts(self, meta: str) -> list[tuple[str, str]]:
+    def _get_opts(self, meta: str) -> list[tuple[str, str]]:
         opts = utils.find_and_get_opts(meta)
         assert len(opts) % 2 == 0, "Request header(s) or flag(s) missing"
         return [
@@ -103,13 +101,13 @@ class RequestifyObject(object):
             if flag == "-H" or flag in utils.DATA_HANDLER
         ]
 
-    def __set_body(self, opts: list[tuple[str, str]]) -> None:
+    def _set_body(self, opts: list[tuple[str, str]]) -> None:
         for option in opts:
             for flag, value in utils.pairwise(option):
                 if flag in utils.DATA_HANDLER:
-                    self.data = utils.DATA_HANDLER[flag](value)
+                    self._data = utils.DATA_HANDLER[flag](value)
 
-    def __set_headers(self, headers: list[str]) -> None:
+    def _set_headers(self, headers: list[str]) -> None:
         for header in headers:
             try:
                 k, v = header.split(": ", 1)
@@ -118,23 +116,23 @@ class RequestifyObject(object):
                 raise
 
             if k.lower() == "cookie":
-                self.__set_cookie(v)
+                self._set_cookie(v)
             else:
-                self.headers[k] = v
+                self._headers[k] = v
 
-    def __set_cookie(self, text: str) -> None:
+    def _set_cookie(self, text: str) -> None:
         cookies = text.split("; ")
         for cookie in cookies:
             try:
                 k, v = cookie.split("=", 1)
-                self.cookies[k] = v
+                self._cookies[k] = v
             except ValueError:
                 raise
 
-    def __set_function_name(self) -> None:
-        netloc = utils.get_netloc(self.url)
-        function_name = f"{self.method}_{netloc}"
-        self.function_name = function_name
+    def _set_function_name(self) -> None:
+        netloc = utils.get_netloc(self._url)
+        function_name = f"{self._method}_{netloc}"
+        self._function_name = function_name
 
     # def __write_to_file(self, file, with_headers=True, with_cookies=True):
     #     request = self.create_beautiful_response(with_headers, with_cookies)
@@ -162,92 +160,81 @@ class RequestifyObject(object):
     #
 
 
-class RequestifyList(object):
+class _RequestifyList(object):
     def __init__(self, *curls: str):
-        self.base_list = curls
-        self.requests: list[RequestifyObject] = []
-        self.existing_function_names = defaultdict(int)
-        self.__generate()
+        self._base_list = curls
+        self._requests: list[_RequestifyObject] = []
+        self._existing_function_names = defaultdict(int)
+        self._generate()
 
     def __str__(self):
-        return f"RequestifyList{[request.__str__() for request in self.requests]}"
+        return f"RequestifyList{[request.__str__() for request in self._requests]}"
 
     def __repr__(self):
-        return f"RequestifyList{[request.__repr__() for request in self.requests]}"
+        return f"RequestifyList{[request.__repr__() for request in self._requests]}"
 
-    def __generate(self) -> None:
-        for curl in self.base_list:
-            request = RequestifyObject(curl)
-            self.requests.append(request)
+    def _generate(self) -> None:
+        for curl in self._base_list:
+            request = _RequestifyObject(curl)
+            self._requests.append(request)
 
-        self.__set_function_names()
+        self._set_function_names()
 
-    def __set_function_names(self) -> None:
-        for request in self.requests:
-            base_function_name = request.function_name
-            function_count = self.existing_function_names[base_function_name]
+    def _set_function_names(self) -> None:
+        for request in self._requests:
+            base_function_name = request._function_name
+            function_count = self._existing_function_names[base_function_name]
             function_name = f"{base_function_name}{('_' + str(function_count) if function_count else '')}"
-            request.function_name = (
+            request._function_name = (
                 function_name if function_name else base_function_name
             )
-            self.existing_function_names[base_function_name] += 1
+            self._existing_function_names[base_function_name] += 1
 
 
 RequestDataType = dict[str, Any]
 ResponseDataType = str | RequestDataType | list[RequestDataType]
 
 
-class ReplaceRequestify(RequestifyList):
+class _ReplaceRequestify(_RequestifyList):
     def __init__(self, *curls):
         super().__init__(*curls)
 
         # the name of the function data it produced
-        self.function_names_and_their_responses: dict[str, ResponseDataType] = {}
-        self.matching_data: dict[str, dict[str, tuple[str, int | None]]] = {}
+        self._function_names_and_their_responses: dict[str, ResponseDataType] = {}
+        self._matching_data: dict[str, dict[str, tuple[str, int | None]]] = {}
         # self.matching_headers = {}
+        self._initialize_responses_dict()
+        self._initialize_matching_data()
 
-        self._generate()
+    def _initialize_responses_dict(self) -> None:
+        assert len(self._requests) > 0, "There must be at least one request"
+        responses = utils.get_responses(self._requests)
+        for request, response in zip(self._requests, responses):
+            self._function_names_and_their_responses[request._function_name] = response
 
-    def _generate(self) -> None:
-        # self.init_first_response()
-        self.initialize_responses_dict()
-        self.initialize_matching_data()
-
-    def initialize_responses_dict(self) -> None:
-        assert len(self.requests) > 0, "There must be at least one request"
-
-        responses = utils.get_responses(self.requests)
-        self.map_all_functions_to_their_responses(responses)
-
-    def map_all_functions_to_their_responses(self, responses: list[Any]) -> None:
-        for request, response in zip(self.requests, responses):
-            self.function_names_and_their_responses[request.function_name] = response
-
-    def initialize_matching_data(self) -> None:
-        for request in self.requests:
-            request_body = request.data
-            current_function = request.function_name
+    def _initialize_matching_data(self) -> None:
+        for request in self._requests:
+            request_body = request._data
+            current_function = request._function_name
             if request_body:
-                matching_data = self.get_functions_and_fields_matching_request_body(
+                matching_data = self._get_functions_and_fields_matching_request_body(
                     request_body
                 )
                 if matching_data:
-                    self.matching_data[current_function] = matching_data
+                    self._matching_data[current_function] = matching_data
 
-    def get_functions_and_fields_matching_request_body(
+    def _get_functions_and_fields_matching_request_body(
         self, request_body: dict[str, str]
     ) -> dict[str, tuple[str, int | None]]:
         matching_functions_and_fields = {}
         list_of_matching_data = []
 
         for request_body_item in request_body.items():
-            # 0 is name of field (content-type, Accept, ...), 1 is value (application/json, */*, ...)
-            field_name = request_body_item[0]
-            value = request_body_item[1]
+            field_name, value = request_body_item
 
-            function_name = self.get_function_producing_this_value(value)
+            function_name = self._get_function_producing_this_value(value)
             if function_name:
-                matching_data = (field_name, self.get_data_matching_value(value))
+                matching_data = (field_name, self._get_data_matching_value(value))
 
                 if matching_data:
                     list_of_matching_data.append(matching_data)
@@ -260,41 +247,41 @@ class ReplaceRequestify(RequestifyList):
                     ] = list_of_matching_data[0]
         return matching_functions_and_fields
 
-    def get_function_producing_this_value(self, value: str) -> str | None:
+    def _get_function_producing_this_value(self, value: str) -> str | None:
         for (
             function_name,
             response_data,
-        ) in self.function_names_and_their_responses.items():
-            if self.is_found_in_data(value, response_data):
+        ) in self._function_names_and_their_responses.items():
+            if self._is_found_in_data(value, response_data):
                 return function_name
 
     @staticmethod
-    def is_found_in_data(value: str, data: ResponseDataType) -> bool:
+    def _is_found_in_data(value: str, data: ResponseDataType) -> bool:
         if isinstance(data, dict):
             return value in data.values()
         elif isinstance(data, list):
             for response in data:
-                return ReplaceRequestify.is_found_in_data(value, response)
+                return _ReplaceRequestify._is_found_in_data(value, response)
         else:
             return data == value
 
         return False
 
-    def get_data_matching_value(self, value: str) -> tuple[str, int | None] | None:
-        for response in self.function_names_and_their_responses.values():
+    def _get_data_matching_value(self, value: str) -> tuple[str, int | None] | None:
+        for response in self._function_names_and_their_responses.values():
             # if the response is a list, add index to tuple
             if isinstance(response, list):
-                return self.get_field_name_and_index_where_values_match(
+                return self._get_field_name_and_index_where_values_match(
                     value, response, True
                 )
 
             else:
-                return self.get_field_name_and_index_where_values_match(
+                return self._get_field_name_and_index_where_values_match(
                     value, response, False
                 )
 
     @staticmethod
-    def get_field_name_and_index_where_values_match(
+    def _get_field_name_and_index_where_values_match(
         value: str, response: ResponseDataType, has_index=True
     ) -> tuple[str, int | None] | None:
         return_tuple = None

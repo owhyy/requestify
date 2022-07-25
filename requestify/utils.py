@@ -53,6 +53,10 @@ def find_url_or_error(s: str) -> str:
     return url  # type: ignore
 
 
+def find_method(s: str) -> Match[AnyStr @ search] | None:
+    return re.search(METHOD_REGEX, s)
+
+
 def get_strings_without_url(url: str, list_of_strings: list[str]) -> list[str]:
     return [s for s in list_of_strings if s != url]
 
@@ -105,6 +109,7 @@ def get_responses(requestify_list: list[RequestifyObject]) -> list[Any]:
         responses = _get_responses_requests(requestify_list)
 
     return [get_json_or_text(response) for response in responses]
+
 
 async def _get_response_async(
     requestify_object: RequestifyObject,
@@ -161,6 +166,7 @@ def _get_responses_requests(
         for requestify_object in requestify_list
     ]
 
+
 def get_json_or_text(
     request: requests.models.Response | httpx._models.Response,
 ) -> Any:
@@ -207,21 +213,3 @@ def get_netloc(url: str) -> str:
 
     else:
         raise ValueError("Not a valid url")
-
-
-def is_valid_response(response: Any) -> bool:
-    return isinstance(response, dict) or isinstance(response, list)
-
-
-def is_list_of_jsons(list_to_test: list) -> bool:
-    if not isinstance(list_to_test, list):
-        return False
-    for assumed_dict in list_to_test:
-        if not isinstance(assumed_dict, dict):
-            return False
-
-    return True
-
-
-def is_json(data: Any) -> bool:
-    return is_list_of_jsons(data) or isinstance(data, dict)

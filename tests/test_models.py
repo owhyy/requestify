@@ -1,7 +1,7 @@
 import pytest
 
 from requestify.utils import get_json_or_text, get_response
-from requestify.models import ReplaceRequestify, RequestifyObject, RequestifyList
+from requestify.models import _ReplaceRequestify, _RequestifyObject, _RequestifyList
 
 EBS = "https://ebs.io"
 GOOGLE = "https://google.com"
@@ -13,15 +13,15 @@ class TestRequestifyObject:
     def assert_everything_matches(
         self, req, url=None, method=None, headers={}, data={}, cookies={}
     ):
-        assert req.url == url
-        assert req.method == method
-        assert req.headers == headers
-        assert req.data == data
-        assert req.cookies == cookies
+        assert req._url == url
+        assert req._method == method
+        assert req._headers == headers
+        assert req._data == data
+        assert req._cookies == cookies
 
     @pytest.mark.parametrize("method", ("GET", "POST", "PUT", "PATCH", "HEAD"))
     def test_no_headers_no_data_no_cookies(self, method):
-        req = RequestifyObject(f"curl -X {method} {GOOGLE}")
+        req = _RequestifyObject(f"curl -X {method} {GOOGLE}")
         self.assert_everything_matches(req, GOOGLE, method.lower(), {}, {}, {})
 
     @pytest.mark.parametrize(
@@ -36,7 +36,7 @@ class TestRequestifyObject:
         ),
     )
     def test_different_curl_positions(self, curl):
-        req = RequestifyObject(curl)
+        req = _RequestifyObject(curl)
         self.assert_everything_matches(
             req=req,
             url=GOOGLE,
@@ -45,21 +45,21 @@ class TestRequestifyObject:
         )
 
     def test_with_headers_no_data_no_cookies(self):
-        req = RequestifyObject(f"""curl -X post {GOOGLE} -H 'x: y'""")
+        req = _RequestifyObject(f"""curl -X post {GOOGLE} -H 'x: y'""")
 
         self.assert_everything_matches(
             req=req, url=GOOGLE, method="post", headers={"x": "y"}, data={}, cookies={}
         )
 
     def test_with_no_headers_with_data_no_cookies(self):
-        req = RequestifyObject(f"""curl -X post {GOOGLE} -d '{{"x":"y"}}'""")
+        req = _RequestifyObject(f"""curl -X post {GOOGLE} -d '{{"x":"y"}}'""")
 
         self.assert_everything_matches(
             req=req, url=GOOGLE, method="post", headers={}, data={"x": "y"}, cookies={}
         )
 
     def test_with_no_headers_no_data_with_cookies(self):
-        req = RequestifyObject(
+        req = _RequestifyObject(
             f"""
         curl -X post {GOOGLE} -H "Cookie: cuki=sure"
         """
@@ -75,7 +75,7 @@ class TestRequestifyObject:
         )
 
     def test_curl_and_url_only(self):
-        req = RequestifyObject(f"curl {GOOGLE}")
+        req = _RequestifyObject(f"curl {GOOGLE}")
         self.assert_everything_matches(req, GOOGLE, "get", {}, {}, {})
 
     # TODO: add more cases
@@ -88,10 +88,10 @@ class TestRequestifyObject:
     )
     def test_invalid_curl(self, invalid_curl):
         with pytest.raises(AssertionError):
-            RequestifyObject(f"{invalid_curl} {GOOGLE}")
+            _RequestifyObject(f"{invalid_curl} {GOOGLE}")
 
     def test_lowercase_boolean_headers(self):
-        req = RequestifyObject(f"""curl -X post {GOOGLE} -H 'x: false' -H 'y: true'""")
+        req = _RequestifyObject(f"""curl -X post {GOOGLE} -H 'x: false' -H 'y: true'""")
 
         headers = {
             "x": "False",
@@ -103,7 +103,7 @@ class TestRequestifyObject:
         )
 
     def test_contains_flags(self):
-        req = RequestifyObject(
+        req = _RequestifyObject(
             f"curl -X POST {GOOGLE} -H 'content-type: application/json' --compressed;"
         )
         self.assert_everything_matches(
@@ -114,7 +114,7 @@ class TestRequestifyObject:
         )
 
     def test_uses_data_handler(self):
-        req = RequestifyObject(
+        req = _RequestifyObject(
             f"""curl {GOOGLE} -d '{{"username":"nujabes", "password": "rip"}}' -H 'Accept: */*'"""
         )
 
@@ -135,25 +135,25 @@ class TestRequestifyList(object):
         r2 = f"curl -X GET {GITHUB}"
         r3 = f"curl -X GET {EBS}"
 
-        assert RequestifyList(r1, r2, r3).requests == [
-            RequestifyObject(r1),
-            RequestifyObject(r2),
-            RequestifyObject(r3),
+        assert _RequestifyList(r1, r2, r3)._requests == [
+            _RequestifyObject(r1),
+            _RequestifyObject(r2),
+            _RequestifyObject(r3),
         ]
 
     def test_list_function_name_generation(self):
         r1 = f"curl -X GET {GOOGLE}"
         r2 = f"curl -X POST {GITHUB}"
 
-        lorobj = RequestifyList(r1, r1, r1, r2)
-        function_names = [r.function_name for r in lorobj.requests]
+        lorobj = _RequestifyList(r1, r1, r1, r2)
+        function_names = [r._function_name for r in lorobj._requests]
         assert function_names == [
             "get_google_com",
             "get_google_com_1",
             "get_google_com_2",
             "post_github_com",
         ]
-        assert lorobj.existing_function_names == {
+        assert lorobj._existing_function_names == {
             "get_google_com": 3,
             "post_github_com": 1,
         }
@@ -171,10 +171,10 @@ class TestReplaceRequestify(object):
     def test_replace_one_request(self, mocker):
         self.mock_get_responses(mocker)
         curl = f"curl -X GET {GOOGLE}"
-        r = ReplaceRequestify(curl)
-        assert r.requests == [RequestifyObject(curl)]
-        assert r.function_names_and_their_responses == {"get_google_com": {"data": 1}}
-        assert r.matching_data == {}
+        r = _ReplaceRequestify(curl)
+        assert r._requests == [_RequestifyObject(curl)]
+        assert r._function_names_and_their_responses == {"get_google_com": {"data": 1}}
+        assert r._matching_data == {}
 
     def test_replace_requests_no_data_to_replace(self, mocker):
         mocker.patch(
@@ -184,20 +184,20 @@ class TestReplaceRequestify(object):
         )
         curl = f"curl -X GET {GOOGLE}"
         nodata_curl = f"curl -X POST {GOOGLE}"
-        r = ReplaceRequestify(curl, nodata_curl)
-        assert r.function_names_and_their_responses == {
+        r = _ReplaceRequestify(curl, nodata_curl)
+        assert r._function_names_and_their_responses == {
             "get_google_com": {"foo": "bar"},
             "post_google_com": {"foo": "xyz"},
         }
-        assert r.matching_data == {}
+        assert r._matching_data == {}
 
     def test_initialize_responses_dict(self, mocker):
         self.mock_get_responses(mocker)
         r = f"curl -X GET {GOOGLE}"
         mocker.patch("tests.test_models.get_response", return_value={"data": 1})
-        response = get_response(RequestifyObject(r))
-        rr = ReplaceRequestify(r)
-        assert rr.function_names_and_their_responses == {"get_google_com": {"data": 1}}
+        response = get_response(_RequestifyObject(r))
+        rr = _ReplaceRequestify(r)
+        assert rr._function_names_and_their_responses == {"get_google_com": {"data": 1}}
 
     def test_has_matching_null_data(self, mocker):
         mocker.patch(
@@ -207,8 +207,8 @@ class TestReplaceRequestify(object):
         )
         r1 = f"curl -X GET {GOOGLE}"
         r2 = f"""curl -X POST -d '{{"data": None"}}' {GOOGLE}"""
-        rr = ReplaceRequestify(r1, r2)
-        assert rr.matching_data == {}
+        rr = _ReplaceRequestify(r1, r2)
+        assert rr._matching_data == {}
 
     def test_has_matching_data_dict(self, mocker):
         mocker.patch(
@@ -218,8 +218,8 @@ class TestReplaceRequestify(object):
         )
         r1 = f"curl -X GET {GOOGLE}"
         r2 = f"""curl -X POST -d '{{"data": 1}}' {GOOGLE}"""
-        rr = ReplaceRequestify(r1, r2)
-        assert rr.matching_data == {
+        rr = _ReplaceRequestify(r1, r2)
+        assert rr._matching_data == {
             "post_google_com": {"get_google_com": ("data", None)}
         }
 
@@ -231,8 +231,8 @@ class TestReplaceRequestify(object):
         )
         r1 = f"curl -X GET {GOOGLE}"
         r2 = f"""curl -X POST -d '{{"data": [1, 2, 3]}}' {GOOGLE}"""
-        rr = ReplaceRequestify(r1, r2)
-        assert rr.matching_data == {
+        rr = _ReplaceRequestify(r1, r2)
+        assert rr._matching_data == {
             "post_google_com": {"get_google_com": ("data", None)}
         }
 
@@ -244,5 +244,5 @@ class TestReplaceRequestify(object):
         )
         r1 = f"curl -X GET {GOOGLE}"
         r2 = f"""curl -X POST -d '{{"data": [1, 2, 3]}}' {GOOGLE}"""
-        rr = ReplaceRequestify(r1, r2)
-        assert rr.matching_data == {}
+        rr = _ReplaceRequestify(r1, r2)
+        assert rr._matching_data == {}

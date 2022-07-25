@@ -24,19 +24,19 @@ def generate_requestify_base_text(
     request_options = ""
 
     if with_headers:
-        requestify_text.append(f"headers = {req.headers}")
+        requestify_text.append(f"headers = {req._headers}")
         request_options += ", headers=headers"
 
     if with_cookies:
-        requestify_text.append(f"cookies = {req.cookies}")
+        requestify_text.append(f"cookies = {req._cookies}")
         request_options += ", cookies=cookies"
 
-    if req.data:
-        requestify_text.append(f"data = {req.data}")
+    if req._data:
+        requestify_text.append(f"data = {req._data}")
         request_options += ", data=data"
 
     requestify_text.append(
-        f"{REQUEST_VARIABLE_NAME} = requests.{req.method}('{req.url}'{request_options})"
+        f"{REQUEST_VARIABLE_NAME} = requests.{req._method}('{req._url}'{request_options})"
     )
 
     return requestify_text
@@ -46,7 +46,7 @@ def generate_requestify_function(
     req: RequestifyObject, with_headers=True, with_cookies=True
 ) -> FunctionTextType | None:
     request_text = generate_requestify_base_text(req, with_headers, with_cookies)
-    return generate_function_text_outside_class(req.function_name, *request_text)
+    return generate_function_text_outside_class(req._function_name, *request_text)
 
 
 """
