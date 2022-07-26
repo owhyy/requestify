@@ -212,7 +212,9 @@ class TestReplaceRequestify(object):
         r1 = f"curl -X GET {GOOGLE}"
         r2 = f"""curl -X POST -d '{{"bar": 1}}' {GOOGLE}"""
         rr = _ReplaceRequestify(r1, r2)
-        assert rr._matching_data == {"post_google_com['bar']": "get_google_com['foo']"}
+        assert rr._matching_data == {
+            ("post_google_com", "bar"): ("get_google_com", "foo", None)
+        }
 
     def test_has_matching_data_list(self, mocker):
         mocker.patch(
@@ -223,7 +225,9 @@ class TestReplaceRequestify(object):
         r1 = f"curl -X GET {GOOGLE}"
         r2 = f"""curl -X POST -d '{{"bar": [1, 2, 3]}}' {GOOGLE}"""
         rr = _ReplaceRequestify(r1, r2)
-        assert rr._matching_data == {"post_google_com['bar']": "get_google_com['foo']"}
+        assert rr._matching_data == {
+            ("post_google_com", "bar"): ("get_google_com", "foo", None)
+        }
 
     def test_has_matching_data_string(self, mocker):
         mocker.patch(
