@@ -273,7 +273,7 @@ class TestModelTextGeneration(object):
                 (
                     "\tdef __init__(self):",
                     [
-                        f"\t\tself.{text_utils.REQUEST_MATCHING_DATA_DICT_NAME} = {rreq._function_names_and_their_responses}"
+                        f"\t\tself.{text_utils.REQUEST_MATCHING_DATA_DICT_NAME} = {rreq._requests_and_their_responses}"
                     ],
                 ),
                 (

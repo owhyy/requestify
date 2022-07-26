@@ -3,7 +3,7 @@
 import re
 from typing import Any
 import requests
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from requestify import utils
 
 
@@ -243,8 +243,10 @@ class _ReplaceRequestify(_RequestifyList):
                 ) = self._get_matching_data(request_body)
 
                 if matching_request and current_field and matching_field:
-                    key = (current_request, current_field)
-                    matching_data = (matching_request, matching_field, index)
+                    key = namedtuple("Request", current_request, current_field)
+                    matching_data = namedtuple(
+                        "Response", matching_request, matching_field, index
+                    )
                     self._matching_data[key] = matching_data
 
     def _get_matching_data(
