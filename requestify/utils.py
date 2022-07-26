@@ -57,10 +57,6 @@ def find_method(s: str) -> Match[AnyStr @ search] | None:
     return re.search(METHOD_REGEX, s)
 
 
-def get_strings_without_url(url: str, list_of_strings: list[str]) -> list[str]:
-    return [s for s in list_of_strings if s != url]
-
-
 # https://stackoverflow.com/questions/5389507/iterating-over-every-two-elements-in-a-list
 def pairwise(iterable):
     "s -> (s0, s1), (s2, s3), (s4, s5), ..."
@@ -127,15 +123,15 @@ async def _get_response_async(
 
 
 async def _get_responses_async(
-    requestify_list: list[RequestifyObject],
+    requestify_list: list[_RequestifyObject],
 ) -> tuple[httpx._models.Response]:
     async with httpx.AsyncClient() as client:
         request = (
             client.request(
-                method=requestify_object.method,
-                url=requestify_object.url,
-                headers=requestify_object.headers,
-                cookies=requestify_object.cookies,
+                method=requestify_object._method,
+                url=requestify_object._url,
+                headers=requestify_object._headers,
+                cookies=requestify_object._cookies,
             )
             for requestify_object in requestify_list
         )
@@ -145,21 +141,21 @@ async def _get_responses_async(
 
 
 def _get_response_requests(
-    requestify_object: RequestifyObject,
+    requestify_object: _RequestifyObject,
 ) -> requests.models.Response:
     response = requests.request(
-        method=requestify_object.method,
-        url=requestify_object.url,
-        data=requestify_object.data,
-        headers=requestify_object.headers,
-        cookies=requestify_object.cookies,
+        method=requestify_object._method,
+        url=requestify_object._url,
+        data=requestify_object._data,
+        headers=requestify_object._headers,
+        cookies=requestify_object._cookies,
     )
 
     return response
 
 
 def _get_responses_requests(
-    requestify_list: list[RequestifyObject],
+    requestify_list: list[_RequestifyObject],
 ) -> list[requests.models.Response]:
     return [
         _get_response_requests(requestify_object)

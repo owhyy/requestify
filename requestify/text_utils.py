@@ -3,6 +3,7 @@ from typing import Any
 
 REQUEST_VARIABLE_NAME = "request"
 REQUEST_CLASS_NAME = "RequestsTest"
+REQUEST_MATCHING_DATA_DICT_NAME = "workflow"
 
 FunctionTextType = tuple[str, list[str]]
 ClassTextType = tuple[str, list[FunctionTextType]]
@@ -205,13 +206,25 @@ def generate_requestify_list_class(
     )
 
 
-def generate_replacement_base_text(rreq: _ReplaceRequestify) -> list[str]:
-    pass
+def generate_replacement(
+    rreq: _ReplaceRequestify, with_headers=True, with_cookies=True
+) -> ClassTextType:
+    init_function = (
+        "__init__",
+        f"self.{REQUEST_MATCHING_DATA_DICT_NAME} = {rreq._function_names_and_their_responses}",
+    )
+    class_functions = [
+        (
+            request._function_name,
+            *generate_requestify_base_text(request, with_headers, with_cookies),
+        )
+        for request in rreq._requests
+    ]
 
-
-def generate_replacement_function(rreq: _ReplaceRequestify) -> FunctionTextType:
-    pass
-
-
-def generate_replacement_class(rreq: _ReplaceRequestify) -> ClassTextType:
-    pass
+    for request in rreq._matching_data:
+        pass
+    class_body = [init_function, class_functions]
+    # return generate_class_text_from_ungenerated_functions(
+    #     REQUEST_CLASS_NAME, *class_body
+    # )
+    # matching_data = rreq._matching_data

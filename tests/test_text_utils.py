@@ -1,6 +1,7 @@
 import pytest
-from requestify.models import _RequestifyObject, _RequestifyList
+from requestify.models import _RequestifyObject, _RequestifyList, _ReplaceRequestify
 from requestify import text_utils
+from .helpers import mock_get_responses
 
 GOOGLE = "https://google.com"
 
@@ -20,12 +21,6 @@ class TestBaseGeneration:
 
     def test_generate_imports_no_args(self):
         assert len(text_utils.generate_imports_text()) == 0
-
-    def test_replace_request_variable_name(self):
-        pass
-
-    def test_replace_request_class_name(self):
-        pass
 
     def test_replace_function_name(self):
         pass
@@ -141,6 +136,45 @@ class TestBaseGeneration:
 
 
 class TestModelTextGeneration(object):
+    @staticmethod
+    def is_in_2d_list(s: str, l: list[str]):
+        return any(s in sl for sl in l)
+
+    def test_request_variable_name_gets_set(self):
+        req = _RequestifyObject(f"""curl -X post '{GOOGLE}' -H 'x: y'""")
+        assert self.is_in_2d_list(
+            text_utils.REQUEST_VARIABLE_NAME,
+            text_utils.generate_requestify_base_text(req, True, True),
+        )
+
+    def test_requestify_object_class_name_gets_set(self):
+        req = _RequestifyObject(f"""curl -X post '{GOOGLE}' -H 'x: y'""")
+        assert (
+            text_utils.REQUEST_CLASS_NAME
+            in text_utils.generate_requestify_class(req, True, True)[0]
+        )
+
+    def test_requestify_list_class_name_gets_set(self):
+        rl = _RequestifyList(f"""curl -X post '{GOOGLE}' -H 'x: y'""")
+        assert (
+            text_utils.REQUEST_CLASS_NAME
+            in text_utils.generate_requestify_list_class(rl, True, True)[0]
+        )
+
+    def test_requestify_object_function_name_gets_set(self):
+        req = _RequestifyObject(f"""curl -X post '{GOOGLE}' -H 'x: y'""")
+        assert (
+            req._function_name
+            in text_utils.generate_requestify_function(req, True, True)[0]
+        )
+
+    def test_requestify_list_function_name_gets_set(self):
+        rl = _RequestifyList(f"""curl -X post '{GOOGLE}' -H 'x: y'""")
+        assert (
+            rl._requests[0]._function_name
+            in text_utils.generate_requestify_list_function(rl, True, True)[0][0]
+        )
+
     def test_base_requstify_with_headers_with_cookies(self):
         req = _RequestifyObject(f"""curl -X post '{GOOGLE}' -H 'x: y'""")
         base_response_text = [
@@ -229,11 +263,36 @@ class TestModelTextGeneration(object):
         )
         assert text_utils.generate_requestify_list_class(rl) == text
 
-    def test_generate_base_replacement(self):
+    def test_generate_replacement_no_matching_data(self, mocker):
+        mock_get_responses(mocker)
+        rreq = _ReplaceRequestify(f"curl -X GET '{GOOGLE}")
+        req = rreq._requests[0]
+        text = (
+            f"class {text_utils.REQUEST_CLASS_NAME}():",
+            [
+                (
+                    "\tdef __init__(self):",
+                    [
+                        f"\t\tself.{text_utils.REQUEST_MATCHING_DATA_DICT_NAME} = {rreq._function_names_and_their_responses}"
+                    ],
+                ),
+                (
+                    f"\tdef {req._function_name}(self):",
+                    [
+                        "\t\theaders = {}",
+                        "\t\tcookies = {}",
+                        f"\t\t{text_utils.REQUEST_VARIABLE_NAME} = requests.get('{GOOGLE}', headers=headers, cookies=cookies)",
+                    ],
+                ),
+            ],
+        )
+        assert text_utils.generate_replacement(rreq) == text
+
+    def test_generate_replacement_matching_string(self):
         pass
 
-    def test_generate_replacement_function(self):
+    def test_generate_replacement_matching_list(self):
         pass
 
-    def test_generate_replacement_class(self):
+    def test_generate_replacement_matching_list_element(self):
         pass

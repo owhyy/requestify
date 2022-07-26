@@ -2,6 +2,7 @@ import pytest
 
 from requestify.utils import get_json_or_text, get_response
 from requestify.models import _ReplaceRequestify, _RequestifyObject, _RequestifyList
+from .helpers import mock_get_responses
 
 EBS = "https://ebs.io"
 GOOGLE = "https://google.com"
@@ -160,16 +161,8 @@ class TestRequestifyList(object):
 
 
 class TestReplaceRequestify(object):
-    # we do this so we don't have to make requests for every test,
-    # as it is both - slow and requires internet access
-    def mock_get_responses(self, mocker):
-        mocker.patch(
-            "requestify.models.utils.get_responses",
-            return_value=[{"data": 1}],
-        )
-
     def test_replace_one_request(self, mocker):
-        self.mock_get_responses(mocker)
+        mock_get_responses(mocker)
         curl = f"curl -X GET {GOOGLE}"
         r = _ReplaceRequestify(curl)
         assert r._requests == [_RequestifyObject(curl)]
@@ -192,7 +185,7 @@ class TestReplaceRequestify(object):
         assert r._matching_data == {}
 
     def test_initialize_responses_dict(self, mocker):
-        self.mock_get_responses(mocker)
+        mock_get_responses(mocker)
         r = f"curl -X GET {GOOGLE}"
         mocker.patch("tests.test_models.get_response", return_value={"data": 1})
         response = get_response(_RequestifyObject(r))
