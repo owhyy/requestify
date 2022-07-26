@@ -241,7 +241,6 @@ class _ReplaceRequestify(_RequestifyList):
             current_field, value = request_body_item
             matching_function = self._get_function_producing_value(value)
             if matching_function:
-                # TODO: test this
                 matching_field, index = self._get_matching_field_and_index(value)
 
                 if matching_field:
@@ -289,6 +288,7 @@ class _ReplaceRequestify(_RequestifyList):
                     value, response, False
                 )
 
+    #TODO: write this better
     @staticmethod
     def _get_field_name_and_index_where_values_match(
         value: str, response: ResponseDataType, has_index=True

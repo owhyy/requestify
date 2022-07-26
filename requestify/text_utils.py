@@ -206,6 +206,7 @@ def generate_requestify_list_class(
     )
 
 
+# TODO: determine index if with_headers and with_cookies is false
 def generate_replacement(
     rreq: _ReplaceRequestify, with_headers=True, with_cookies=True
 ) -> ClassTextType:
@@ -213,18 +214,23 @@ def generate_replacement(
         "__init__",
         f"self.{REQUEST_MATCHING_DATA_DICT_NAME} = {rreq._function_names_and_their_responses}",
     )
-    class_functions = [
-        (
-            request._function_name,
-            *generate_requestify_base_text(request, with_headers, with_cookies),
-        )
-        for request in rreq._requests
-    ]
+    class_functions = []
 
-    for request in rreq._matching_data:
-        pass
+    for (
+        current_request,
+        current_field,
+        matching_request,
+        matching_field,
+        index,
+    ) in rreq._matching_data:
+        function_body = generate_requestify_base_text(
+            current_request, with_headers, with_cookies
+        )
+        new_data = f"{REQUEST_MATCHING_DATA_DICT_NAME}[{matching_request._function_name}][{matching_request._index}]"
+        # 2 is where data field is inside the body
+        formatted_function_body = function_body[2].replace(current_field, new_data)
+        class_functions.append(formatted_function_body)
     class_body = [init_function, class_functions]
-    # return generate_class_text_from_ungenerated_functions(
-    #     REQUEST_CLASS_NAME, *class_body
-    # )
-    # matching_data = rreq._matching_data
+    return generate_class_text_from_ungenerated_functions(
+        REQUEST_CLASS_NAME, *class_body
+    )
