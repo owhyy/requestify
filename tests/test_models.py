@@ -164,10 +164,11 @@ class TestReplaceRequestify(object):
     def test_replace_one_request(self, mocker):
         mock_get_responses(mocker)
         curl = f"curl -X GET {GOOGLE}"
-        r = _ReplaceRequestify(curl)
-        assert r._requests == [_RequestifyObject(curl)]
-        assert r._function_names_and_their_responses == {"get_google_com": {"data": 1}}
-        assert r._matching_data == {}
+        r = _RequestifyObject(curl)
+        rr = _ReplaceRequestify(curl)
+        assert rr._requests == [_RequestifyObject(curl)]
+        assert rr._requests_and_their_responses == {r: {"data": 1}}
+        assert rr._matching_data == {}
 
     def test_replace_requests_no_data_to_replace(self, mocker):
         mocker.patch(
@@ -177,20 +178,22 @@ class TestReplaceRequestify(object):
         )
         curl = f"curl -X GET {GOOGLE}"
         nodata_curl = f"curl -X POST {GOOGLE}"
-        r = _ReplaceRequestify(curl, nodata_curl)
-        assert r._function_names_and_their_responses == {
-            "get_google_com": {"foo": "bar"},
-            "post_google_com": {"foo": "xyz"},
+        r1 = _RequestifyObject(curl)
+        r2 = _RequestifyObject(nodata_curl)
+        rr = _ReplaceRequestify(curl, nodata_curl)
+        assert rr._requests_and_their_responses == {
+            r1: {"foo": "bar"},
+            r2: {"foo": "xyz"},
         }
-        assert r._matching_data == {}
+        assert rr._matching_data == {}
 
     def test_initialize_responses_dict(self, mocker):
         mock_get_responses(mocker)
-        r = f"curl -X GET {GOOGLE}"
+        curl = f"curl -X GET {GOOGLE}"
         mocker.patch("tests.test_models.get_response", return_value={"data": 1})
-        response = get_response(_RequestifyObject(r))
-        rr = _ReplaceRequestify(r)
-        assert rr._function_names_and_their_responses == {"get_google_com": {"data": 1}}
+        r = _RequestifyObject(curl)
+        rr = _ReplaceRequestify(curl)
+        assert rr._requests_and_their_responses == {r: {"data": 1}}
 
     def test_has_matching_null_data(self, mocker):
         mocker.patch(
@@ -209,12 +212,12 @@ class TestReplaceRequestify(object):
             #               GET          POST
             return_value=[{"foo": 1}, {"something": 1}],
         )
-        r1 = f"curl -X GET {GOOGLE}"
-        r2 = f"""curl -X POST -d '{{"bar": 1}}' {GOOGLE}"""
-        rr = _ReplaceRequestify(r1, r2)
-        assert rr._matching_data == {
-            ("post_google_com", "bar"): ("get_google_com", "foo", None)
-        }
+        curl1 = f"curl -X GET {GOOGLE}"
+        curl2 = f"""curl -X POST -d '{{"bar": 1}}' {GOOGLE}"""
+        r1 = _RequestifyObject(curl1)
+        r2 = _RequestifyObject(curl2)
+        rr = _ReplaceRequestify(curl1, curl2)
+        assert rr._matching_data == {(r2, "bar"): (r1, "foo", -1)}
 
     def test_has_matching_data_list(self, mocker):
         mocker.patch(
@@ -222,20 +225,22 @@ class TestReplaceRequestify(object):
             #               GET                 POST
             return_value=[{"foo": [1, 2, 3]}, {"bar": [1, 2, 3]}],
         )
-        r1 = f"curl -X GET {GOOGLE}"
-        r2 = f"""curl -X POST -d '{{"bar": [1, 2, 3]}}' {GOOGLE}"""
-        rr = _ReplaceRequestify(r1, r2)
-        assert rr._matching_data == {
-            ("post_google_com", "bar"): ("get_google_com", "foo", None)
-        }
+        curl1 = f"curl -X GET {GOOGLE}"
+        curl2 = f"""curl -X POST -d '{{"bar": [1, 2, 3]}}' {GOOGLE}"""
+        r1 = _RequestifyObject(curl1)
+        r2 = _RequestifyObject(curl2)
+        rr = _ReplaceRequestify(curl1, curl2)
+        assert rr._matching_data == {(r2, "bar"): (r1, "foo", -1)}
 
     def test_has_matching_data_string(self, mocker):
         mocker.patch(
             "requestify.models.utils.get_responses",
-            #               GET          POST
+            #              GET    POST
             return_value=["foo", "foo"],
         )
-        r1 = f"curl -X GET {GOOGLE}"
-        r2 = f"""curl -X POST -d '{{"data": [1, 2, 3]}}' {GOOGLE}"""
-        rr = _ReplaceRequestify(r1, r2)
+        curl1 = f"curl -X GET {GOOGLE}"
+        curl2 = f"""curl -X POST -d '{{"bar": [1, 2, 3]}}' {GOOGLE}"""
+        r1 = _RequestifyObject(curl1)
+        r2 = _RequestifyObject(curl2)
+        rr = _ReplaceRequestify(curl1, curl2)
         assert rr._matching_data == {}
