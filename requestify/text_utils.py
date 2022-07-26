@@ -180,12 +180,29 @@ def generate_requestify_class(
     )
 
 
-def generate_requestify_list_function(loreq: _RequestifyList) -> FunctionTextType:
-    pass
+def generate_requestify_list_function(
+    rl: _RequestifyList, with_headers=True, with_cookies=True
+) -> list[FunctionTextType]:
+    request_functions = [
+        generate_requestify_function(request, with_headers, with_cookies)
+        for request in rl._requests
+    ]
+    return request_functions
 
 
-def generate_requestify_list_class(loreq: _RequestifyList) -> ClassTextType:
-    pass
+def generate_requestify_list_class(
+    rl: _RequestifyList, with_headers=True, with_cookies=True
+) -> ClassTextType:
+    class_body = [
+        (
+            request._function_name,
+            *generate_requestify_base_text(request, with_headers, with_cookies),
+        )
+        for request in rl._requests
+    ]
+    return generate_class_text_from_ungenerated_functions(
+        REQUEST_CLASS_NAME, *class_body
+    )
 
 
 def generate_replacement_base_text(rreq: _ReplaceRequestify) -> list[str]:

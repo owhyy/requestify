@@ -1,5 +1,5 @@
 import pytest
-from requestify.models import _RequestifyObject
+from requestify.models import _RequestifyObject, _RequestifyList
 from requestify import text_utils
 
 GOOGLE = "https://google.com"
@@ -20,6 +20,15 @@ class TestBaseGeneration:
 
     def test_generate_imports_no_args(self):
         assert len(text_utils.generate_imports_text()) == 0
+
+    def test_replace_request_variable_name(self):
+        pass
+
+    def test_replace_request_class_name(self):
+        pass
+
+    def test_replace_function_name(self):
+        pass
 
     def test_generate_function_text_inside_class(self):
         function_in_class = (
@@ -185,61 +194,40 @@ class TestModelTextGeneration(object):
         )
         assert text_utils.generate_requestify_class(req) == text
 
-    # feature not needed yet
-    def test_generate_base_requestify_list(self):
-        pass
-
     def test_generate_requestify_list_function(self):
-        req = _RequestifyObject(f"curl -X GET '{GOOGLE}")
-        body = (
-            [
-                "\theaders = {}",
-                "\tcookies = {}",
-                f"\t{text_utils.REQUEST_VARIABLE_NAME} = requests.get('{GOOGLE}', headers=headers, cookies=cookies)",
-            ],
-        )
-        reqs = 3 * [req]
-
-        text = [
-            (f"def {reqs[0]}get_google():", body),
-            (f"def {reqs[1]}get_google_1():", body),
-            (f"def {reqs[1]}get_google_2():", body),
+        req = f"curl -X GET '{GOOGLE}"
+        body = [
+            "\theaders = {}",
+            "\tcookies = {}",
+            f"\t{text_utils.REQUEST_VARIABLE_NAME} = requests.get('{GOOGLE}', headers=headers, cookies=cookies)",
         ]
 
-    def test_generate_requestify_list_class(self):
-        req = _RequestifyObject(f"curl -X GET '{GOOGLE}")
-        body = (
-            [
-                "\theaders = {}",
-                "\tcookies = {}",
-                f"\t{text_utils.REQUEST_VARIABLE_NAME} = requests.get('{GOOGLE}', headers=headers, cookies=cookies)",
-            ],
-        )
-        reqs = 3 * [req]
+        rl = _RequestifyList(req)
+        reqs = rl._requests
+        text = [
+            (f"def {reqs[0]._function_name}():", body),
+        ]
 
+        assert text_utils.generate_requestify_list_function(rl) == text
+
+    def test_generate_requestify_list_class(self):
+        req = f"curl -X GET '{GOOGLE}"
+        rl = _RequestifyList(req)
+        req = rl._requests
         text = (
-            f"class {text_utils.REQUEST_CLASS_NAME}:",
+            f"class {text_utils.REQUEST_CLASS_NAME}():",
             [
-                (f"\tdef {reqs[0]._function_name}(self):"),
-                [
-                    "\t\theaders = {}",
-                    "\t\tcookies = {}",
-                    f"\t\t{text_utils.REQUEST_VARIABLE_NAME} = requests.get('{GOOGLE}', headers=headers, cookies=cookies)",
-                ],
-                (f"\tdef {reqs[1]._function_name}(self):"),
-                [
-                    "\t\theaders = {}",
-                    "\t\tcookies = {}",
-                    f"\t\t{text_utils.REQUEST_VARIABLE_NAME} = requests.get('{GOOGLE}', headers=headers, cookies=cookies)",
-                ],
-                (f"\tdef {reqs[2]._function_name}(self):"),
-                [
-                    "\t\theaders = {}",
-                    "\t\tcookies = {}",
-                    f"\t\t{text_utils.REQUEST_VARIABLE_NAME} = requests.get('{GOOGLE}', headers=headers, cookies=cookies)",
-                ],
+                (
+                    f"\tdef {req[0]._function_name}(self):",
+                    [
+                        "\t\theaders = {}",
+                        "\t\tcookies = {}",
+                        f"\t\t{text_utils.REQUEST_VARIABLE_NAME} = requests.get('{GOOGLE}', headers=headers, cookies=cookies)",
+                    ],
+                )
             ],
         )
+        assert text_utils.generate_requestify_list_class(rl) == text
 
     def test_generate_base_replacement(self):
         pass
