@@ -204,7 +204,8 @@ class _RequestifyList(object):
 
 
 RequestDataType = dict[str, Any]
-ResponseDataType = str | RequestDataType | list[RequestDataType]
+# ResponseDataType = str | RequestDataType | list[RequestDataType]
+ResponseDataType = dict[str, dict[str, Any]]
 
 
 class _ReplaceRequestify(_RequestifyList):
@@ -216,114 +217,58 @@ class _ReplaceRequestify(_RequestifyList):
             _RequestifyObject, ResponseDataType
         ] = {}
         self._matching_data: dict[
-            tuple[_RequestifyObject, str], tuple[_RequestifyObject, str, int | None]
+            tuple[_RequestifyObject, str], tuple[_RequestifyObject, str]
         ] = {}
         # self._matching_headers: dict[str, dict[str, tuple[str, str]]] = {}
         # self._matching_url_content: dict[str, dict[str, tuple[str, str]]] = {}
-        self._initialize_responses_dict()
+        self._map_requests_to_responses()
         self._initialize_matching_data()
         # self._initialize_matching_headers()
         # self._initialize_matching_url_values()
 
-    def _initialize_responses_dict(self) -> None:
+    def _map_requests_to_responses(self) -> None:
         assert len(self._requests) > 0, "There must be at least one request"
         responses = utils.get_responses(self._requests)
         for request, response in zip(self._requests, responses):
             self._requests_and_their_responses[request] = response
 
+    @staticmethod
+    def _get_matching_field(request, sought_value):
+        for field, value in request.data:
+            if value == sought_value:
+                return field
+
+    @staticmethod
+    def _get_matching_request():
+        pass
+
     def _initialize_matching_data(self) -> None:
         for current_request in self._requests:
-            request_body = current_request._data
-            if request_body:
-                (
-                    matching_request,
-                    matching_field,
-                    current_field,
-                    index,
-                ) = self._get_matching_data(request_body)
+            self._match(current_request)
 
-                if matching_request and current_field and matching_field:
-                    key = namedtuple("Request", current_request, current_field)
-                    matching_data = namedtuple(
-                        "Response", matching_request, matching_field, index
-                    )
-                    self._matching_data[key] = matching_data
+    def _match(self, current_request):
+        request_body = current_request._data
+        for current_field, current_value in request_body.items():
+            for (
+                request,
+                response,
+            ) in self._requests_and_their_responses.items():
+                # do not match data returned by the current response
+                if current_request == request:
+                    continue
 
-    def _get_matching_data(
-        self, request_body: dict[str, str]
-    ) -> tuple[_RequestifyObject, str, str, int] | None:
-        matching_data = None
-
-        for request_body_item in request_body.items():
-            current_field, value = request_body_item
-            matching_request = self._get_request_producing_this_value(value)
-            if matching_request:
-                matching_field, index = self._get_matching_field_and_index(value)
-
-                if matching_field:
-                    matching_data = (
-                        matching_request,
-                        matching_field,
-                        current_field,
-                        index,
-                    )
-
-        return matching_data
-
-    def _get_request_producing_this_value(self, value: str) -> _RequestifyObject | None:
-        for (
-            request,
-            response_data,
-        ) in self._requests_and_their_responses.items():
-            if self._is_found_in_data(value, response_data):
-                return request
-
-    @staticmethod
-    def _is_found_in_data(value: str, data: ResponseDataType) -> bool:
-        if isinstance(data, dict):
-            return value in data.values()
-        elif isinstance(data, list):
-            for response in data:
-                return _ReplaceRequestify._is_found_in_data(value, response)
-        else:
-            return data == value
-
-        return False
-
-    def _get_matching_field_and_index(self, value: str) -> tuple[str, int] | None:
-        for response in self._requests_and_their_responses.values():
-            # if the response is a list, add index to tuple
-            if isinstance(response, list):
-                return self._get_field_name_and_index_where_values_match(
-                    value, response, True
-                )
-
-            else:
-                return self._get_field_name_and_index_where_values_match(
-                    value, response, False
-                )
-
-    # TODO: write this better
-    # -1 is returned when index is not found
-    @staticmethod
-    def _get_field_name_and_index_where_values_match(
-        value: str, response: ResponseDataType, has_index=True
-    ) -> tuple[str, int] | None:
-        return_tuple = None
-        if isinstance(response, dict):
-            for field_name, response_value in response.items():
-                if value == response_value:
-                    return_tuple = (field_name, -1)
-        elif isinstance(response, list):
-            for index, data_dict in enumerate(response):
-                if data_dict:
-                    for field_name, response_value in data_dict.items():
-                        if value == response_value:
-                            if has_index:
-                                return_tuple = (field_name, index)
-                            else:
-                                return_tuple = (field_name, -1)
-
-        else:
-            return_tuple = None
-        return return_tuple
+                if isinstance(response, dict):
+                    for response_field, response_value in response.items():
+                        # match only the first time the value is met
+                        if (
+                            current_value == response_value
+                            and not self._matching_data.get(
+                                (current_request, current_field)
+                            )
+                        ):
+                            self._matching_data[(current_request, current_field)] = (
+                                request,
+                                response_field,
+                            )
+                elif isinstance(response, list):
+                    raise NotImplementedError

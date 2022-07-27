@@ -1,7 +1,6 @@
 from __future__ import annotations
 from collections import namedtuple
 from typing import Any
-from typing_extensions import NamedTuple
 
 REQUEST_VARIABLE_NAME = "request"
 REQUEST_CLASS_NAME = "RequestsTest"

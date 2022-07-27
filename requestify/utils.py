@@ -75,11 +75,13 @@ def uppercase_boolean_values(opts: list[tuple[str, str]]) -> list[tuple[str, str
 
     return ret_opts
 
+def flatten_list(l: list) -> list:
+    return list(itertools.chain.from_iterable(l))
 
 def find_and_get_opts(meta: str) -> list[str]:
     opts = re.findall(OPTS_REGEX, meta)
-    _ = list(itertools.chain.from_iterable(opts))
-    return [option for option in _ if option]
+    flat_list = flatten_list(opts)
+    return [option for option in flat_list if option]
 
 
 def split_list(l: list[str]) -> list[str]:
