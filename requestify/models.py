@@ -179,6 +179,13 @@ class _RequestifyList(object):
         self._existing_function_names = defaultdict(int)
         self._generate()
 
+    def __len__(self):
+        return len(self._requests)
+
+    def __iter__(self):
+        for request in self._requests:
+            yield request
+
     def __str__(self):
         return f"RequestifyList{[request.__str__() for request in self._requests]}"
 
@@ -208,11 +215,11 @@ RequestDataType = dict[str, Any]
 ResponseDataType = dict[str, dict[str, Any]]
 
 
-class _ReplaceRequestify(_RequestifyList):
+class _ReplaceRequestify:
     def __init__(self, *curls):
-        super().__init__(*curls)
+        self._requests = _RequestifyList(*curls)
 
-        # the name of the function data it produced
+        # requests and data they produced
         self._requests_and_their_responses: dict[
             _RequestifyObject, ResponseDataType
         ] = {}

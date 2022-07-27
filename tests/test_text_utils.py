@@ -25,8 +25,19 @@ class TestBaseGeneration:
     def test_replace_function_name(self):
         pass
 
+    def test_function_dataclass(self):
+        expected = text_utils.Function(
+            "def function_name():",
+            ["\tfoo = 10"],
+        )
+        actual = text_utils.generate_function_text_outside_class(
+            "function_name", "foo = 10"
+        )
+        assert actual.name == expected.name
+        assert actual.body == expected.body
+
     def test_generate_function_text_inside_class(self):
-        function_in_class = (
+        function_in_class = text_utils.Function(
             "\tdef function_name(self):",
             [
                 '\t\tprint("i am a function body")',
@@ -101,8 +112,6 @@ class TestBaseGeneration:
                 '\t\tprint("i am a function body")',
             ],
         )
-        # unindented_class_body = [unindented_class_function] * 3
-        # indented_class_body = [indented_class_function] * 3
 
         assert text_utils.indent_class_body(unindented_class_function) == [
             indented_class_function
@@ -138,6 +147,8 @@ class TestBaseGeneration:
 class TestModelTextGeneration(object):
     @staticmethod
     def is_in_2d_list(s: str, l: list[str]):
+        if not l:
+            return
         return any(s in sl for sl in l)
 
     def test_request_variable_name_gets_set(self):

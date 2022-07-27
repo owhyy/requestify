@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, TYPE_CHECKING
 import httpx
 import itertools
 import asyncio
@@ -8,6 +8,9 @@ import json
 import re
 from black import format_str, FileMode
 from urllib import parse
+
+if TYPE_CHECKING:
+    from models import _RequestifyObject, _RequestifyList
 
 # name that will be used for class with requests
 REQUESTS_CLASS_NAME = "RequestsTest"
@@ -75,8 +78,10 @@ def uppercase_boolean_values(opts: list[tuple[str, str]]) -> list[tuple[str, str
 
     return ret_opts
 
+
 def flatten_list(l: list) -> list:
     return list(itertools.chain.from_iterable(l))
+
 
 def find_and_get_opts(meta: str) -> list[str]:
     opts = re.findall(OPTS_REGEX, meta)
@@ -88,7 +93,7 @@ def split_list(l: list[str]) -> list[str]:
     return list(itertools.chain.from_iterable([element.split(" ") for element in l]))
 
 
-def get_response(requestify_object: RequestifyObject) -> Any | str:
+def get_response(requestify_object: _RequestifyObject) -> Any | str:
     try:
         response = asyncio.run(_get_response_async(requestify_object))
     except TimeoutError:
@@ -99,7 +104,7 @@ def get_response(requestify_object: RequestifyObject) -> Any | str:
     return response_data
 
 
-def get_responses(requestify_list: list[RequestifyObject]) -> list[Any]:
+def get_responses(requestify_list: _RequestifyList) -> list[Any]:
     try:
         responses = asyncio.run(_get_responses_async(requestify_list))
     except TimeoutError:
@@ -110,22 +115,22 @@ def get_responses(requestify_list: list[RequestifyObject]) -> list[Any]:
 
 
 async def _get_response_async(
-    requestify_object: RequestifyObject,
+    requestify_object: _RequestifyObject,
 ) -> httpx._models.Response:
     async with httpx.AsyncClient() as client:
         response = await client.request(
-            method=requestify_object.method,
-            url=requestify_object.url,
-            data=requestify_object.data,
-            headers=requestify_object.headers,
-            cookies=requestify_object.cookies,
+            method=requestify_object._method,
+            url=requestify_object._url,
+            data=requestify_object._data,
+            headers=requestify_object._headers,
+            cookies=requestify_object._cookies,
         )
 
     return response
 
 
 async def _get_responses_async(
-    requestify_list: list[_RequestifyObject],
+    requestify_list: _RequestifyList,
 ) -> tuple[httpx._models.Response]:
     async with httpx.AsyncClient() as client:
         request = (
@@ -157,7 +162,7 @@ def _get_response_requests(
 
 
 def _get_responses_requests(
-    requestify_list: list[_RequestifyObject],
+    requestify_list: _RequestifyList,
 ) -> list[requests.models.Response]:
     return [
         _get_response_requests(requestify_object)

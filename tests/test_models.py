@@ -166,7 +166,7 @@ class TestReplaceRequestify(object):
         curl = f"curl -X GET {GOOGLE}"
         r = _RequestifyObject(curl)
         rr = _ReplaceRequestify(curl)
-        assert rr._requests == [_RequestifyObject(curl)]
+        assert rr._requests._requests[0] == _RequestifyList(curl)._requests[0] == r
         assert rr._requests_and_their_responses == {r: {"data": 1}}
         assert rr._matching_data == {}
 
@@ -260,11 +260,7 @@ class TestReplaceRequestify(object):
         mocker.patch(
             "requestify.models.utils.get_responses",
             #             GET     POST
-            return_value=[
-                None,
-                {"foo": 1},
-                None
-            ],
+            return_value=[None, {"foo": 1}, None],
         )
         curl1 = f"curl -X GET {GOOGLE}"
         curl2 = f"""curl -X POST -d '{{"bar": 1}}' {GOOGLE}"""

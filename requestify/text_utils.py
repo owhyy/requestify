@@ -1,6 +1,9 @@
 from __future__ import annotations
 from collections import namedtuple
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from models import _RequestifyObject, _RequestifyList, _ReplaceRequestify
 
 REQUEST_VARIABLE_NAME = "request"
 REQUEST_CLASS_NAME = "RequestsTest"
@@ -28,7 +31,7 @@ def __generate_function_text(
 ) -> Function:
     name_part = f"""def {function_name}{"(self)" if is_in_class else "()"}:"""
     function_part = [*function_body]
-    function_text = Function(name_part, function_part)
+    function_text = Function(name=name_part, body=function_part)
     return function_text
 
 
@@ -80,7 +83,7 @@ def __indent_function(function: Function, indent_amount=1) -> Function:
     for line in function_body:
         indented_function_body.append(body_indent + line)
 
-    indented_function = (indented_function_name, indented_function_body)
+    indented_function = Function(indented_function_name, indented_function_body)
     return indented_function
 
 
@@ -113,7 +116,7 @@ def generate_class_text_from_ungenerated_functions(
 ) -> Class:
     class_body = _generate_class_body(*class_functions)
     # indented_class_body = indent_class_body(*class_body)
-    class_text = (f"class {class_name}():", class_body)
+    class_text = Class(f"class {class_name}():", class_body)
     return class_text
 
 
@@ -123,7 +126,7 @@ def generate_class_text_from_generated_functions(
     class_name: str, *class_body: Function
 ) -> Class:
     indented_class_body = indent_class_body(*class_body)
-    class_text = (f"class {class_name}():", indented_class_body)
+    class_text = Class(f"class {class_name}():", indented_class_body)
     return class_text
 
 
@@ -163,7 +166,7 @@ def generate_requestify_base_text(
     requestify_text.append(
         f"{REQUEST_VARIABLE_NAME} = requests.{req._method}('{req._url}'{request_options})"
     )
-    RequestFunction._make(requestify_text)
+    return requestify_text
 
 
 def generate_requestify_function(
@@ -216,23 +219,23 @@ def generate_replacement(
         f"self.{REQUEST_MATCHING_DATA_DICT_NAME} = {rreq._requests_and_their_responses}",
     )
     class_functions = generate_requestify_list_function(rreq._requests)
+    return None
 
-    for (
-        current_request,
-        current_field,
-        matching_request,
-        matching_field,
-        index,
-    ) in rreq._matching_data:
-        function_body = generate_requestify_base_text(
-            current_request, with_headers, with_cookies
-        )
-        new_data_assignment = f"{REQUEST_MATCHING_DATA_DICT_NAME}[{matching_request._function_name}][{matching_request._index}]"
-        class_functions[
-            class_functions.index(current_request)
-        ].body.data_assignment = new_data_assignment
-
-    class_body = [init_function, class_functions]
-    return generate_class_text_from_ungenerated_functions(
-        REQUEST_CLASS_NAME, *class_body
-    )
+    # for (
+    #     current_request,
+    #     current_field,
+    #     matching_request,
+    #     matching_field,
+    # ) in rreq._matching_data.items():
+    #     function_body = generate_requestify_base_text(
+    #         current_request, with_headers, with_cookies
+    #     )
+    #     new_data_assignment = f"{REQUEST_MATCHING_DATA_DICT_NAME}[{matching_request._function_name}][{matching_request._index}]"
+    #     class_functions[
+    #         class_functions.index(current_request)
+    #     ].body.data_assignment = new_data_assignment
+    #
+    # class_body = [init_function, class_functions]
+    # return generate_class_text_from_ungenerated_functions(
+    #     REQUEST_CLASS_NAME, *class_body
+    # )
