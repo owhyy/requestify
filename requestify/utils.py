@@ -34,7 +34,7 @@ def find_url_or_error(s: str) -> str:
     return url  # type: ignore
 
 
-def find_method(s: str) -> Match[AnyStr @ search] | None:
+def find_method(s: str):
     return re.search(METHOD_REGEX, s)
 
 

@@ -356,7 +356,7 @@ class TestModelTextGeneration(object):
             return_value=[{"foo": 1}, None],
         )
         curl1 = f"curl -X GET {GOOGLE}"
-        curl2 = f"""curl -X POST -d '{{"bar": 1}}' {GOOGLE}"""
+        curl2 = f"""curl -X POST -d '{{"bar": 1, "span": "eggs"}}' {GOOGLE}"""
         r1 = _RequestifyObject(curl1)
         r2 = _RequestifyObject(curl2)
         rreq = _ReplaceRequestify(curl1, curl2)
@@ -382,7 +382,7 @@ class TestModelTextGeneration(object):
                     [
                         "\t\theaders = {}",
                         "\t\tcookies = {}",
-                        f"""\t\tdata = {{"bar": self.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}']['foo']}}""",
+                        f"""\t\tdata = {{'bar': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}']['foo'], 'span': 'eggs'}}""",
                         f"\t\t{REQUEST_VARIABLE_NAME} = requests.post('{GOOGLE}', headers=headers, cookies=cookies, data=data)",
                         f"\t\tself.{REQUEST_MATCHING_DATA_DICT_NAME}['{r2._function_name}'] = {REQUEST_VARIABLE_NAME}",
                     ],

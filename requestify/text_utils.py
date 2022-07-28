@@ -8,7 +8,12 @@ from .constants import (
 )
 
 if TYPE_CHECKING:
-    from models import _RequestifyObject, _RequestifyList, _ReplaceRequestify, RequestMatch
+    from models import (
+        _RequestifyObject,
+        _RequestifyList,
+        _ReplaceRequestify,
+        RequestMatch,
+    )
 
 
 """
@@ -211,7 +216,7 @@ def generate_replacement(
                 new_data_assignment = _create_new_assignment(matched_request)
                 data = body[2]
                 new_data = data.replace(
-                    f"{{'{matched_request.field}': {matched_request.value}}}",
+                    f"'{matched_request.field}': {matched_request.value}",
                     new_data_assignment,
                 )
                 body[2] = new_data
@@ -227,5 +232,5 @@ def generate_replacement(
 
 
 def _create_new_assignment(match: RequestMatch):
-    new_data_assignment = f"""{{"{match.field}": self.{REQUEST_MATCHING_DATA_DICT_NAME}['{match.matching_request._function_name}']['{match.request_field}']}}"""
+    new_data_assignment = f"""'{match.field}': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{match.matching_request._function_name}']['{match.request_field}']"""
     return new_data_assignment
