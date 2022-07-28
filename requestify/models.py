@@ -1,5 +1,6 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from dataclasses import dataclass
 import re
 from typing import Any
 import requests
@@ -186,6 +187,9 @@ class _RequestifyList(object):
         for request in self._requests:
             yield request
 
+    def __getitem__(self, index):
+        return self._requests[index]
+
     def __str__(self):
         return f"RequestifyList{[request.__str__() for request in self._requests]}"
 
@@ -211,8 +215,16 @@ class _RequestifyList(object):
 
 
 RequestDataType = dict[str, Any]
-# ResponseDataType = str | RequestDataType | list[RequestDataType]
 ResponseDataType = dict[str, dict[str, Any]]
+
+
+@dataclass
+class Match:
+    request: _RequestifyObject
+    field: str
+    matching_request: _RequestifyObject
+    request_field: str
+    value: Any
 
 
 class _ReplaceRequestify:
@@ -223,9 +235,7 @@ class _ReplaceRequestify:
         self._requests_and_their_responses: dict[
             _RequestifyObject, ResponseDataType
         ] = {}
-        self._matching_data: dict[
-            tuple[_RequestifyObject, str], tuple[_RequestifyObject, str]
-        ] = {}
+        self._matching_data: list[Match] = []
         # self._matching_headers: dict[str, dict[str, tuple[str, str]]] = {}
         # self._matching_url_content: dict[str, dict[str, tuple[str, str]]] = {}
         self._map_requests_to_responses()
@@ -239,16 +249,6 @@ class _ReplaceRequestify:
         for request, response in zip(self._requests, responses):
             self._requests_and_their_responses[request] = response
 
-    @staticmethod
-    def _get_matching_field(request, sought_value):
-        for field, value in request.data:
-            if value == sought_value:
-                return field
-
-    @staticmethod
-    def _get_matching_request():
-        pass
-
     def _initialize_matching_data(self) -> None:
         for current_request in self._requests:
             self._match(current_request)
@@ -256,6 +256,9 @@ class _ReplaceRequestify:
     def _match(self, current_request):
         request_body = current_request._data
         for current_field, current_value in request_body.items():
+            matched_requests = []
+            matched_fields = []
+
             for (
                 request,
                 response,
@@ -266,16 +269,22 @@ class _ReplaceRequestify:
 
                 if isinstance(response, dict):
                     for response_field, response_value in response.items():
+                        match = Match(
+                            current_request,
+                            current_field,
+                            request,
+                            response_field,
+                            response_value,
+                        )
                         # match only the first time the value is met
                         if (
                             current_value == response_value
-                            and not self._matching_data.get(
-                                (current_request, current_field)
-                            )
+                            and not match.request in matched_requests
+                            and not match.request_field in matched_fields
                         ):
-                            self._matching_data[(current_request, current_field)] = (
-                                request,
-                                response_field,
-                            )
+                            self._matching_data.append(match)
+                            matched_requests.append(match.request)
+                            matched_fields.append(match.field)
+
                 elif isinstance(response, list):
                     raise NotImplementedError
