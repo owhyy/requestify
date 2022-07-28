@@ -1,15 +1,9 @@
-# !/usr/bin/env python3
-# -*- coding: utf-8 -*-
 from dataclasses import dataclass
 import re
 from typing import Any
-import requests
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from requestify import utils
-
-
-RESPONSES_DICT_NAME = "workflow"
-JSON_ERROR_NAME = "JSONDecodeError"
+from .constants import DATA_HANDLER
 
 
 class _RequestifyObject(object):
@@ -111,14 +105,14 @@ class _RequestifyObject(object):
         return [
             (flag, data)
             for flag, data in utils.pairwise(opts)
-            if flag == "-H" or flag in utils.DATA_HANDLER
+            if flag == "-H" or flag in DATA_HANDLER
         ]
 
     def _set_body(self, opts: list[tuple[str, str]]) -> None:
         for option in opts:
             for flag, value in utils.pairwise(option):
-                if flag in utils.DATA_HANDLER:
-                    self._data = utils.DATA_HANDLER[flag](value)
+                if flag in DATA_HANDLER:
+                    self._data = DATA_HANDLER[flag](value)
 
     def _set_headers(self, headers: list[str]) -> None:
         for header in headers:
@@ -219,7 +213,7 @@ ResponseDataType = dict[str, dict[str, Any]]
 
 
 @dataclass
-class Match:
+class RequestMatch:
     request: _RequestifyObject
     field: str
     matching_request: _RequestifyObject
@@ -235,7 +229,7 @@ class _ReplaceRequestify:
         self._requests_and_their_responses: dict[
             _RequestifyObject, ResponseDataType
         ] = {}
-        self._matching_data: list[Match] = []
+        self._matching_data: list[RequestMatch] = []
         # self._matching_headers: dict[str, dict[str, tuple[str, str]]] = {}
         # self._matching_url_content: dict[str, dict[str, tuple[str, str]]] = {}
         self._map_requests_to_responses()
@@ -269,7 +263,7 @@ class _ReplaceRequestify:
 
                 if isinstance(response, dict):
                     for response_field, response_value in response.items():
-                        match = Match(
+                        match = RequestMatch(
                             current_request,
                             current_field,
                             request,

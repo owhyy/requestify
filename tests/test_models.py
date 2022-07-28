@@ -5,7 +5,7 @@ from requestify.models import (
     _ReplaceRequestify,
     _RequestifyObject,
     _RequestifyList,
-    Match,
+    RequestMatch,
 )
 from .helpers import mock_get_responses
 
@@ -222,7 +222,7 @@ class TestReplaceRequestify(object):
         r1 = _RequestifyObject(curl1)
         r2 = _RequestifyObject(curl2)
         rr = _ReplaceRequestify(curl1, curl2)
-        assert rr._matching_data == [Match(r2, "bar", r1, "foo", 1)]
+        assert rr._matching_data == [RequestMatch(r2, "bar", r1, "foo", 1)]
 
     def test_has_matching_data_list(self, mocker):
         mocker.patch(
@@ -235,7 +235,7 @@ class TestReplaceRequestify(object):
         r1 = _RequestifyObject(curl1)
         r2 = _RequestifyObject(curl2)
         rr = _ReplaceRequestify(curl1, curl2)
-        assert rr._matching_data == [Match(r2, "bar", r1, "foo", [1, 2, 3])]
+        assert rr._matching_data == [RequestMatch(r2, "bar", r1, "foo", [1, 2, 3])]
 
     def test_has_matching_data_string(self, mocker):
         mocker.patch(
@@ -259,7 +259,7 @@ class TestReplaceRequestify(object):
         r1 = _RequestifyObject(curl1)
         r2 = _RequestifyObject(curl2)
         rr = _ReplaceRequestify(curl1, curl2)
-        assert rr._matching_data == [Match(r2, "bar", r1, "foo", 1)]
+        assert rr._matching_data == [RequestMatch(r2, "bar", r1, "foo", 1)]
 
     def test_does_not_match_itself(self, mocker):
         mocker.patch(
@@ -285,6 +285,6 @@ class TestReplaceRequestify(object):
         r2 = _RequestifyObject(curl2)
         rr = _ReplaceRequestify(curl1, curl2)
         assert rr._matching_data == [
-            Match(r2, "span", r1, "foo", 1),
-            Match(r2, "eggs", r1, "foo", 1),
+            RequestMatch(r2, "span", r1, "foo", 1),
+            RequestMatch(r2, "eggs", r1, "foo", 1),
         ]

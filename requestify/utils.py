@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .constants import URL_REGEX, METHOD_REGEX,  OPTS_REGEX
 from typing import Any, TYPE_CHECKING
 import httpx
 import itertools
@@ -9,32 +10,9 @@ import re
 from black import format_str, FileMode
 from urllib import parse
 
+
 if TYPE_CHECKING:
     from models import _RequestifyObject, _RequestifyList
-
-# name that will be used for class with requests
-REQUESTS_CLASS_NAME = "RequestsTest"
-RESPONSE_VARIABLE_NAME = "response"
-
-# methods to be called if data flags are present
-DATA_HANDLER = {
-    "-d": lambda x: get_data_dict(x),
-    "--data": lambda x: get_data_dict(x),
-    "--data-ascii": lambda x: get_data_dict(x),
-    "--data-binary": lambda x: bytes(x, encoding="utf-8"),
-    "--data-raw": lambda x: get_data_dict(x),
-    "--data-urlencode": lambda x: parse.quote(x),
-}
-
-METHOD_REGEX = re.compile(
-    f'({"|".join(name for name in DATA_HANDLER)})|(?:-X)\s+(\S\w+\S)'
-)
-OPTS_REGEX = re.compile(
-    """ (-{1,2}\S+)\s+?"([\S\s]+?)"|(-{1,2}\S+)\s+?'([\S\s]+?)'""", re.VERBOSE
-)
-URL_REGEX = re.compile(
-    "((?:(?<=[^a-zA-Z0-9]){0,}(?:(?:https?\:\/\/){0,1}(?:[a-zA-Z0-9\%]{1,}\:[a-zA-Z0-9\%]{1,}[@]){,1})(?:(?:\w{1,}\.{1}){1,5}(?:(?:[a-zA-Z]){1,})|(?:[a-zA-Z]{1,}\/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\:[0-9]{1,4}){1})){1}(?:(?:(?:\/{0,1}(?:[a-zA-Z0-9\-\_\=\-]){1,})*)(?:[?][a-zA-Z0-9\=\%\&\_\-]{1,}){0,1})(?:\.(?:[a-zA-Z0-9]){0,}){0,1})"
-)
 
 
 def format_url(url: str) -> str:
@@ -131,7 +109,7 @@ async def _get_response_async(
 
 async def _get_responses_async(
     requestify_list: _RequestifyList,
-) -> tuple[httpx._models.Response]:
+) -> tuple[httpx._models.Response] | list[Any]:
     async with httpx.AsyncClient() as client:
         request = (
             client.request(

@@ -1,14 +1,15 @@
 from __future__ import annotations
 from collections import namedtuple
-from dataclasses import dataclass, field, astuple
 from typing import TYPE_CHECKING
+from .constants import (
+    REQUEST_VARIABLE_NAME,
+    REQUEST_CLASS_NAME,
+    REQUEST_MATCHING_DATA_DICT_NAME,
+)
 
 if TYPE_CHECKING:
-    from models import _RequestifyObject, _RequestifyList, _ReplaceRequestify, Match
+    from models import _RequestifyObject, _RequestifyList, _ReplaceRequestify, RequestMatch
 
-REQUEST_VARIABLE_NAME = "request"
-REQUEST_CLASS_NAME = "RequestsTest"
-REQUEST_MATCHING_DATA_DICT_NAME = "workflow"
 
 """
 name is the name of the function, body is function body
@@ -27,11 +28,6 @@ name is REQUEST_CLASS_NAME, body is a list of `Function` objects
 """
 Class = namedtuple("Class", "name body")
 
-"""
-A special kind of body, used for cleaner access to the
-line in which assignment happens
-"""
-
 
 """
 General
@@ -46,11 +42,9 @@ def generate_imports_text(*packages: str) -> list[str]:
 Functions
 """
 
-# def generate_function_text(function: Function) -> str:
-#     print()
-#
-# def generate_class_text(class: Class) -> str:
-#     print()
+
+def generate_function_text(function: Function) -> str:
+    return function.name + "".join(function.body)
 
 
 def generate_class_function(base: FunctionBase) -> Function:
@@ -110,6 +104,12 @@ def _indent_function(function: Function, indent_amount) -> Function:
 """
 Class
 """
+
+
+def generate_class_text(class_tuple: Class) -> str:
+    functions = [generate_function_text(function) for function in class_tuple.body]
+    return class_tuple.name + "".join(functions)
+
 
 # generates class for functions that were already
 # created with generate_function_text_* functions
@@ -226,6 +226,6 @@ def generate_replacement(
     return generate_class(REQUEST_CLASS_NAME, class_body)
 
 
-def _create_new_assignment(match: Match):
+def _create_new_assignment(match: RequestMatch):
     new_data_assignment = f"""{{"{match.field}": self.{REQUEST_MATCHING_DATA_DICT_NAME}['{match.matching_request._function_name}']['{match.request_field}']}}"""
     return new_data_assignment
