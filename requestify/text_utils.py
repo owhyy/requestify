@@ -232,5 +232,6 @@ def generate_replacement(
 
 
 def _create_new_assignment(match: RequestMatch):
-    new_data_assignment = f"""'{match.field}': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{match.matching_request._function_name}']['{match.request_field}']"""
+    indices = "".join([f"[{index}]" for index in match.indices_of_match])
+    new_data_assignment = f"""'{match.field}': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{match.matching_request._function_name}']{indices}['{match.request_field}']"""
     return new_data_assignment
