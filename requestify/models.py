@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+# from dataclasses import dataclass, field
+import dataclasses
 import re
 from typing import Any
 from collections import defaultdict
@@ -209,16 +210,17 @@ class _RequestifyList(object):
 
 
 RequestDataType = dict[str, Any]
-ResponseDataType = dict[str, dict[str, Any]]
+ResponseDataType = dict[str, RequestDataType | list[RequestDataType]]
 
 
-@dataclass
+@dataclasses.dataclass
 class RequestMatch:
     request: _RequestifyObject
     field: str
     matching_request: _RequestifyObject
     request_field: str
     value: Any
+    indices_of_match: list[int] = dataclasses.field(default_factory=list)
 
 
 class _ReplaceRequestify:
@@ -249,36 +251,66 @@ class _ReplaceRequestify:
 
     def _match(self, current_request):
         request_body = current_request._data
+
         for current_field, current_value in request_body.items():
-            matched_requests = []
-            matched_fields = []
+            matching_field, indices = self._get_matching_field(
+                current_request, current_value
+            ) or (None, None)
+            matching_request = self._get_matching_request(
+                current_request, current_value
+            )
+            if matching_field and matching_request and indices is not None:
+                # recursion returns indices in reverse order
+                indices.reverse()
+                match = RequestMatch(
+                    current_request,
+                    current_field,
+                    matching_request,
+                    matching_field,
+                    current_value,
+                    indices,
+                )
+                self._matching_data.append(match)
 
-            for (
-                request,
-                response,
-            ) in self._requests_and_their_responses.items():
-                # do not match data returned by the current response
-                if current_request == request:
-                    continue
+    @staticmethod
+    def _get_key_and_index_where_values_match(
+        value: Any, d: list[dict] | dict, include_indices=False, indices=None
+    ) -> Any | dict[list[int], Any]:
+        indices = indices or []
+        if isinstance(d, dict):
+            for response_field, response_value in d.items():
+                if response_value == value:
+                    return (response_field, indices)
 
-                if isinstance(response, dict):
-                    for response_field, response_value in response.items():
-                        match = RequestMatch(
-                            current_request,
-                            current_field,
-                            request,
-                            response_field,
-                            response_value,
-                        )
-                        # match only the first time the value is met
-                        if (
-                            current_value == response_value
-                            and not match.request in matched_requests
-                            and not match.request_field in matched_fields
-                        ):
-                            self._matching_data.append(match)
-                            matched_requests.append(match.request)
-                            matched_fields.append(match.field)
+        if isinstance(d, list):
+            for index, subd in enumerate(d):
+                key_and_index = (
+                    _ReplaceRequestify._get_key_and_index_where_values_match(
+                        value, subd, True, indices
+                    )
+                )
+                if key_and_index:
+                    key, prev_indices = key_and_index
+                    prev_indices.append(index)
+                    return (key, prev_indices)
 
-                elif isinstance(response, list):
-                    raise NotImplementedError
+    def _get_matching_field(self, request: _RequestifyObject, value: Any) -> list:
+        for (
+            saved_request,
+            saved_response,
+        ) in self._requests_and_their_responses.items():
+            # do not match responses returned by the same request we are trying to find matches for
+            if saved_request == request:
+                continue
+            return self._get_key_and_index_where_values_match(value, saved_response)
+
+    def _get_matching_request(self, request: _RequestifyObject, value: Any):
+        for (
+            saved_request,
+            saved_response,
+        ) in self._requests_and_their_responses.items():
+            # do not match responses returned by the same request we are trying to find matches for
+            if saved_request == request:
+                continue
+            if self._get_key_and_index_where_values_match(value, saved_response):
+                return saved_request

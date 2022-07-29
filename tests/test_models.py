@@ -222,7 +222,7 @@ class TestReplaceRequestify(object):
         r1 = _RequestifyObject(curl1)
         r2 = _RequestifyObject(curl2)
         rr = _ReplaceRequestify(curl1, curl2)
-        assert rr._matching_data == [RequestMatch(r2, "bar", r1, "foo", 1)]
+        assert rr._matching_data == [RequestMatch(r2, "bar", r1, "foo", 1, [])]
 
     def test_has_matching_data_list(self, mocker):
         mocker.patch(
@@ -235,7 +235,7 @@ class TestReplaceRequestify(object):
         r1 = _RequestifyObject(curl1)
         r2 = _RequestifyObject(curl2)
         rr = _ReplaceRequestify(curl1, curl2)
-        assert rr._matching_data == [RequestMatch(r2, "bar", r1, "foo", [1, 2, 3])]
+        assert rr._matching_data == [RequestMatch(r2, "bar", r1, "foo", [1, 2, 3], [])]
 
     def test_has_matching_data_string(self, mocker):
         mocker.patch(
@@ -259,7 +259,7 @@ class TestReplaceRequestify(object):
         r1 = _RequestifyObject(curl1)
         r2 = _RequestifyObject(curl2)
         rr = _ReplaceRequestify(curl1, curl2)
-        assert rr._matching_data == [RequestMatch(r2, "bar", r1, "foo", 1)]
+        assert rr._matching_data == [RequestMatch(r2, "bar", r1, "foo", 1, [])]
 
     def test_does_not_match_itself(self, mocker):
         mocker.patch(
@@ -285,6 +285,72 @@ class TestReplaceRequestify(object):
         r2 = _RequestifyObject(curl2)
         rr = _ReplaceRequestify(curl1, curl2)
         assert rr._matching_data == [
-            RequestMatch(r2, "span", r1, "foo", 1),
-            RequestMatch(r2, "eggs", r1, "foo", 1),
+            RequestMatch(r2, "span", r1, "foo", 1, []),
+            RequestMatch(r2, "eggs", r1, "foo", 1, []),
+        ]
+
+    def test_multiple_different_value(self, mocker):
+        mocker.patch(
+            "requestify.models.utils.get_responses",
+            #               GET                 POST
+            return_value=[{"foo": 1, "bar": 2}, None],
+        )
+        curl1 = f"curl -X GET {GOOGLE}"
+        curl2 = f"""curl -X POST -d '{{"span": 2, "eggs": 1}}' {GOOGLE}"""
+        r1 = _RequestifyObject(curl1)
+        r2 = _RequestifyObject(curl2)
+        rr = _ReplaceRequestify(curl1, curl2)
+        assert rr._matching_data == [
+            RequestMatch(r2, "span", r1, "bar", 2, []),
+            RequestMatch(r2, "eggs", r1, "foo", 1, []),
+        ]
+
+    def test_multiple_same_value_is_not_json(self, mocker):
+        mocker.patch(
+            "requestify.models.utils.get_responses",
+            #              GET                        POST
+            return_value=[[25, {"foo": 1, "bar": 1}], None],
+        )
+        curl1 = f"curl -X GET {GOOGLE}"
+        curl2 = f"""curl -X POST -d '{{"span": 1, "eggs": 1}}' {GOOGLE}"""
+        r1 = _RequestifyObject(curl1)
+        r2 = _RequestifyObject(curl2)
+        rr = _ReplaceRequestify(curl1, curl2)
+        assert rr._matching_data == [
+            RequestMatch(r2, "span", r1, "foo", 1, [1]),
+            RequestMatch(r2, "eggs", r1, "foo", 1, [1]),
+        ]
+
+    def test_multiple_same_value_is_json(self, mocker):
+        mocker.patch(
+            "requestify.models.utils.get_responses",
+            #              GET                        POST
+            return_value=[[{"span": 5}, {"foo": 1, "bar": 1}], None],
+        )
+        curl1 = f"curl -X GET {GOOGLE}"
+        curl2 = f"""curl -X POST -d '{{"span": 5, "eggs": 1}}' {GOOGLE}"""
+        r1 = _RequestifyObject(curl1)
+        r2 = _RequestifyObject(curl2)
+        rr = _ReplaceRequestify(curl1, curl2)
+        assert rr._matching_data == [
+            RequestMatch(r2, "span", r1, "span", 5, [0]),
+            RequestMatch(r2, "eggs", r1, "foo", 1, [1]),
+        ]
+
+    def test_deeply_nested_list(self, mocker):
+        mocker.patch(
+            "requestify.models.utils.get_responses",
+            return_value=[
+                [{"span": 5}, [{"xyz": 10}, {"baz": 34}, [{"eggs": 2}]]],
+                None,
+            ],
+        )
+        curl1 = f"curl -X GET {GOOGLE}"
+        curl2 = f"""curl -X POST -d '{{"span": 34, "eggs": 2}}' {GOOGLE}"""
+        r1 = _RequestifyObject(curl1)
+        r2 = _RequestifyObject(curl2)
+        rr = _ReplaceRequestify(curl1, curl2)
+        assert rr._matching_data == [
+            RequestMatch(r2, "span", r1, "baz", 34, [1, 1]),
+            RequestMatch(r2, "eggs", r1, "eggs", 2, [1, 2, 0]),
         ]
