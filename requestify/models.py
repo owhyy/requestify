@@ -253,15 +253,13 @@ class _ReplaceRequestify:
         request_body = current_request._data
 
         for current_field, current_value in request_body.items():
-            matching_field, indices = self._get_matching_field(
+            matching_field, indices = self._get_matching_field_and_indices(
                 current_request, current_value
-            ) or (None, None)
+            ) or (None, [])
             matching_request = self._get_matching_request(
                 current_request, current_value
             )
-            if matching_field and matching_request and indices is not None:
-                # recursion returns indices in reverse order
-                indices.reverse()
+            if matching_field and matching_request:
                 match = RequestMatch(
                     current_request,
                     current_field,
@@ -274,8 +272,8 @@ class _ReplaceRequestify:
 
     @staticmethod
     def _get_key_and_index_where_values_match(
-        value: Any, d: list[dict] | dict, include_indices=False, indices=None
-    ) -> Any | dict[list[int], Any]:
+        value: Any, d: list[dict] | dict, indices=None
+    ) -> tuple[Any, list[int]] | None:
         indices = indices or []
         if isinstance(d, dict):
             for response_field, response_value in d.items():
@@ -286,7 +284,7 @@ class _ReplaceRequestify:
             for index, subd in enumerate(d):
                 key_and_index = (
                     _ReplaceRequestify._get_key_and_index_where_values_match(
-                        value, subd, True, indices
+                        value, subd, indices
                     )
                 )
                 if key_and_index:
@@ -294,7 +292,9 @@ class _ReplaceRequestify:
                     prev_indices.append(index)
                     return (key, prev_indices)
 
-    def _get_matching_field(self, request: _RequestifyObject, value: Any) -> list:
+    def _get_matching_field_and_indices(
+        self, request: _RequestifyObject, value: Any
+    ) -> tuple[Any, list[int]] | None:
         for (
             saved_request,
             saved_response,
@@ -302,14 +302,21 @@ class _ReplaceRequestify:
             # do not match responses returned by the same request we are trying to find matches for
             if saved_request == request:
                 continue
-            return self._get_key_and_index_where_values_match(value, saved_response)
+            field, indices = self._get_key_and_index_where_values_match(
+                value, saved_response
+            ) or (None, [])
+            if len(indices) > 0:
+                # iterative recursion appends indices in reverse order,
+                # so we need to reverse them to get the right order
+                indices.reverse()
+
+            return (field, indices)
 
     def _get_matching_request(self, request: _RequestifyObject, value: Any):
         for (
             saved_request,
             saved_response,
         ) in self._requests_and_their_responses.items():
-            # do not match responses returned by the same request we are trying to find matches for
             if saved_request == request:
                 continue
             if self._get_key_and_index_where_values_match(value, saved_response):
