@@ -3,7 +3,7 @@ import re
 from typing import Any
 from collections import defaultdict
 from requestify import utils
-from .constants import DATA_HANDLER
+from .constants import DATA_HANDLER, REQUEST_MATCHING_DATA_DICT_NAME
 
 
 class _RequestifyObject(object):
@@ -212,16 +212,6 @@ RequestDataType = dict[str, Any]
 ResponseDataType = dict[str, RequestDataType | list[RequestDataType]]
 
 
-@dataclasses.dataclass
-class RequestMatch:
-    request: _RequestifyObject
-    field: str
-    matching_request: _RequestifyObject
-    request_field: str
-    value: Any
-    indices_of_match: list[int] = dataclasses.field(default_factory=list)
-
-
 class _ReplaceRequestify:
     def __init__(self, *curls):
         self._requests = _RequestifyList(*curls)
@@ -230,9 +220,6 @@ class _ReplaceRequestify:
         self._requests_and_their_responses: dict[
             _RequestifyObject, ResponseDataType
         ] = {}
-        self._matching_data: list[RequestMatch] = []
-        self._matching_headers: list[RequestMatch] = []
-        # self._matching_url_content: dict[str, dict[str, tuple[str, str]]] = {}
         self._map_requests_to_responses()
         self._initialize_matching_data()
         # self._initialize_matching_headers()
@@ -254,16 +241,16 @@ class _ReplaceRequestify:
         # self._match_urls(current_request)
 
     def _match_data(self, current_request):
-        self._match(current_request, current_request._data, self._matching_data)
+        self._match(current_request, current_request._data, current_request._data)
 
     def _match_headers(self, current_request):
-        self._match(current_request, current_request._headers, self._matching_headers)
+        self._match(current_request, current_request._headers, current_request._headers)
 
     def _match(
         self,
         current_request: _RequestifyObject,
         search_dict: dict,
-        save_list: list[RequestMatch],
+        save_variable: dict,
     ):
         for current_field, current_value in search_dict.items():
             matching_field, indices = self._get_matching_field_and_indices(
@@ -273,15 +260,11 @@ class _ReplaceRequestify:
                 current_request, current_value
             )
             if matching_field and matching_request:
-                match = RequestMatch(
-                    current_request,
-                    current_field,
+                save_variable[current_field] = self._create_new_assignment(
                     matching_request,
                     matching_field,
-                    current_value,
                     indices,
                 )
-                save_list.append(match)
 
     @staticmethod
     def _get_key_and_index_where_values_match(
@@ -334,3 +317,14 @@ class _ReplaceRequestify:
                 continue
             if self._get_key_and_index_where_values_match(value, saved_response):
                 return saved_request
+
+    @staticmethod
+    def _create_new_assignment(
+        matching_request,
+        matching_field,
+        indices,
+    ):
+        indices = "".join([f"[{index}]" for index in indices])
+        new_assignment = f"self.{REQUEST_MATCHING_DATA_DICT_NAME}['{matching_request._function_name}']{indices}['{matching_field}']"
+
+        return new_assignment

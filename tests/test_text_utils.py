@@ -4,6 +4,7 @@ from requestify.text_utils import (
     Function,
     FunctionBase,
     Class,
+    generate_class_text,
     generate_imports_text,
     generate_function_outside_class,
     generate_replacement,
@@ -347,7 +348,9 @@ class TestModelTextGeneration(object):
                 ),
             ],
         )
-        assert generate_replacement(rreq) == text
+        assert generate_class_text(generate_replacement(rreq)) == generate_class_text(
+            text
+        )
 
     def test_generate_replacement_matching_dict(self, mocker):
         mocker.patch(
@@ -388,7 +391,9 @@ class TestModelTextGeneration(object):
                 ),
             ],
         )
-        assert generate_replacement(rreq) == text
+        assert generate_class_text(generate_replacement(rreq)) == generate_class_text(
+            text
+        )
 
     def test_generate_replacement_matching_list_element(self, mocker):
         mocker.patch(
@@ -431,7 +436,9 @@ class TestModelTextGeneration(object):
                 ),
             ],
         )
-        assert generate_replacement(rreq) == text
+        assert generate_class_text(generate_replacement(rreq)) == generate_class_text(
+            text
+        )
 
     def test_generate_replacement_headers(self, mocker):
         mocker.patch(
@@ -470,4 +477,48 @@ class TestModelTextGeneration(object):
                 ),
             ],
         )
-        assert generate_replacement(rreq) == text
+        assert generate_class_text(generate_replacement(rreq)) == generate_class_text(
+            text
+        )
+
+    def test_generate_replacement_headers_and_data(self, mocker):
+        mocker.patch(
+            "requestify.models.utils.get_responses",
+            return_value=[{"foo": "1"}, None],
+        )
+        curl1 = f"curl -X GET {GOOGLE}"
+        curl2 = f"""curl -X POST {GOOGLE} -H 'bar: 1' -d '{{"span": "1"}}'"""
+        rreq = _ReplaceRequestify(curl1, curl2)
+        r1, r2 = rreq._requests
+
+        text = Class(
+            name=f"class {REQUEST_CLASS_NAME}():",
+            body=[
+                Function(
+                    ("\tdef __init__(self):"),
+                    [f"\t\tself.{REQUEST_MATCHING_DATA_DICT_NAME} = {{}}"],
+                ),
+                Function(
+                    f"\tdef {r1._function_name}(self):",
+                    [
+                        "\t\theaders = {}",
+                        "\t\tcookies = {}",
+                        f"\t\t{REQUEST_VARIABLE_NAME} = requests.get('{GOOGLE}', headers=headers, cookies=cookies)",
+                        f"\t\tself.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}'] = {REQUEST_VARIABLE_NAME}",
+                    ],
+                ),
+                Function(
+                    f"\tdef {r2._function_name}(self):",
+                    [
+                        f"""\t\theaders = {{'bar': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}']['foo']}}""",
+                        "\t\tcookies = {}",
+                        f"""\t\tdata = {{'span': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}']['foo']}}""",
+                        f"\t\t{REQUEST_VARIABLE_NAME} = requests.post('{GOOGLE}', headers=headers, cookies=cookies, data=data)",
+                        f"\t\tself.{REQUEST_MATCHING_DATA_DICT_NAME}['{r2._function_name}'] = {REQUEST_VARIABLE_NAME}",
+                    ],
+                ),
+            ],
+        )
+        assert generate_class_text(generate_replacement(rreq)) == generate_class_text(
+            text
+        )

@@ -49,7 +49,7 @@ Functions
 
 
 def generate_function_text(function: Function) -> str:
-    return function.name + "".join(function.body)
+    return function.name + "".join(function.body).replace('"', '`').replace('`', '')
 
 
 def generate_class_function(base: FunctionBase) -> Function:
@@ -159,6 +159,15 @@ def generate_requestify_base_text(
     return requestify_text
 
 
+def generate_replacement_base_text(
+    req: _RequestifyObject, with_headers=True, with_cookies=True
+) -> list[str]:
+    body = generate_requestify_base_text(req, with_headers, with_cookies)
+    assignment_to_data_dict = f"self.{REQUEST_MATCHING_DATA_DICT_NAME}['{req._function_name}'] = {REQUEST_VARIABLE_NAME}"
+    body.append(assignment_to_data_dict)
+    return body
+
+
 def generate_requestify_function(
     req: _RequestifyObject, with_headers=True, with_cookies=True
 ) -> Function:
@@ -207,49 +216,12 @@ def generate_replacement(
         "__init__",
         [f"self.{REQUEST_MATCHING_DATA_DICT_NAME} = {{}}"],
     )
-    class_functions = []
+
+    class_body = [init_function]
 
     for request in rreq._requests:
-        body = generate_requestify_base_text(request, with_headers, with_cookies)
-        _replace_in_headers(request, body, rreq._matching_headers)
-        _replace_in_data(request, body, rreq._matching_data)
-
-        assignment_to_data_dict = f"self.{REQUEST_MATCHING_DATA_DICT_NAME}['{request._function_name}'] = {REQUEST_VARIABLE_NAME}"
-        body.append(assignment_to_data_dict)
-
+        body = generate_replacement_base_text(request, with_headers, with_cookies)
         function = FunctionBase(request._function_name, body)
-        class_functions.append(function)
+        class_body.append(function)
 
-    class_body = [init_function] + class_functions
     return generate_class(REQUEST_CLASS_NAME, class_body)
-
-
-# can be generalized, but i'm not sure it would make code more readable?
-def _replace_in_headers(request, body, matching_headers):
-    for matched_request in matching_headers:
-        if request == matched_request.request:
-            new_header_assignment = _create_new_assignment(matched_request)
-            headers = body[0]
-            new_headers = headers.replace(
-                f"'{matched_request.field}': '{matched_request.value}'",
-                new_header_assignment,
-            )
-            body[0] = new_headers
-
-
-def _replace_in_data(request, body, matching_data):
-    for matched_request in matching_data:
-        if request == matched_request.request:
-            new_data_assignment = _create_new_assignment(matched_request)
-            data = body[2]
-            new_data = data.replace(
-                f"'{matched_request.field}': {matched_request.value}",
-                new_data_assignment,
-            )
-            body[2] = new_data
-
-
-def _create_new_assignment(match: RequestMatch):
-    indices = "".join([f"[{index}]" for index in match.indices_of_match])
-    new_assignment = f"""'{match.field}': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{match.matching_request._function_name}']{indices}['{match.request_field}']"""
-    return new_assignment
