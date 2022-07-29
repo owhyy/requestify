@@ -211,15 +211,8 @@ def generate_replacement(
 
     for request in rreq._requests:
         body = generate_requestify_base_text(request, with_headers, with_cookies)
-        for matched_request in rreq._matching_data:
-            if request == matched_request.request:
-                new_data_assignment = _create_new_assignment(matched_request)
-                data = body[2]
-                new_data = data.replace(
-                    f"'{matched_request.field}': {matched_request.value}",
-                    new_data_assignment,
-                )
-                body[2] = new_data
+        _replace_in_headers(request, body, rreq._matching_headers)
+        _replace_in_data(request, body, rreq._matching_data)
 
         assignment_to_data_dict = f"self.{REQUEST_MATCHING_DATA_DICT_NAME}['{request._function_name}'] = {REQUEST_VARIABLE_NAME}"
         body.append(assignment_to_data_dict)
@@ -231,7 +224,32 @@ def generate_replacement(
     return generate_class(REQUEST_CLASS_NAME, class_body)
 
 
+# can be generalized, but i'm not sure it would make code more readable?
+def _replace_in_headers(request, body, matching_headers):
+    for matched_request in matching_headers:
+        if request == matched_request.request:
+            new_header_assignment = _create_new_assignment(matched_request)
+            headers = body[0]
+            new_headers = headers.replace(
+                f"'{matched_request.field}': '{matched_request.value}'",
+                new_header_assignment,
+            )
+            body[0] = new_headers
+
+
+def _replace_in_data(request, body, matching_data):
+    for matched_request in matching_data:
+        if request == matched_request.request:
+            new_data_assignment = _create_new_assignment(matched_request)
+            data = body[2]
+            new_data = data.replace(
+                f"'{matched_request.field}': {matched_request.value}",
+                new_data_assignment,
+            )
+            body[2] = new_data
+
+
 def _create_new_assignment(match: RequestMatch):
     indices = "".join([f"[{index}]" for index in match.indices_of_match])
-    new_data_assignment = f"""'{match.field}': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{match.matching_request._function_name}']{indices}['{match.request_field}']"""
-    return new_data_assignment
+    new_assignment = f"""'{match.field}': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{match.matching_request._function_name}']{indices}['{match.request_field}']"""
+    return new_assignment

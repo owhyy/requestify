@@ -357,9 +357,8 @@ class TestModelTextGeneration(object):
         )
         curl1 = f"curl -X GET {GOOGLE}"
         curl2 = f"""curl -X POST -d '{{"bar": 1, "span": "eggs"}}' {GOOGLE}"""
-        r1 = _RequestifyObject(curl1)
-        r2 = _RequestifyObject(curl2)
         rreq = _ReplaceRequestify(curl1, curl2)
+        r1, r2 = rreq._requests
 
         text = Class(
             name=f"class {REQUEST_CLASS_NAME}():",
@@ -401,9 +400,8 @@ class TestModelTextGeneration(object):
         )
         curl1 = f"curl -X GET {GOOGLE}"
         curl2 = f"""curl -X POST -d '{{"span": 34, "eggs": 2}}' {GOOGLE}"""
-        r1 = _RequestifyObject(curl1)
-        r2 = _RequestifyObject(curl2)
         rreq = _ReplaceRequestify(curl1, curl2)
+        r1, r2 = rreq._requests
 
         text = Class(
             name=f"class {REQUEST_CLASS_NAME}():",
@@ -428,6 +426,45 @@ class TestModelTextGeneration(object):
                         "\t\tcookies = {}",
                         f"""\t\tdata = {{'span': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}'][1][1]['baz'], 'eggs': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}'][1][2][0]['eggs']}}""",
                         f"\t\t{REQUEST_VARIABLE_NAME} = requests.post('{GOOGLE}', headers=headers, cookies=cookies, data=data)",
+                        f"\t\tself.{REQUEST_MATCHING_DATA_DICT_NAME}['{r2._function_name}'] = {REQUEST_VARIABLE_NAME}",
+                    ],
+                ),
+            ],
+        )
+        assert generate_replacement(rreq) == text
+
+    def test_generate_replacement_headers(self, mocker):
+        mocker.patch(
+            "requestify.models.utils.get_responses",
+            return_value=[{"foo": "1"}, None],
+        )
+        curl1 = f"curl -X GET {GOOGLE}"
+        curl2 = f"curl -X GET {GOOGLE} -H 'bar: 1'"
+        rreq = _ReplaceRequestify(curl1, curl2)
+        r1, r2 = rreq._requests
+
+        text = Class(
+            name=f"class {REQUEST_CLASS_NAME}():",
+            body=[
+                Function(
+                    ("\tdef __init__(self):"),
+                    [f"\t\tself.{REQUEST_MATCHING_DATA_DICT_NAME} = {{}}"],
+                ),
+                Function(
+                    f"\tdef {r1._function_name}(self):",
+                    [
+                        "\t\theaders = {}",
+                        "\t\tcookies = {}",
+                        f"\t\t{REQUEST_VARIABLE_NAME} = requests.get('{GOOGLE}', headers=headers, cookies=cookies)",
+                        f"\t\tself.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}'] = {REQUEST_VARIABLE_NAME}",
+                    ],
+                ),
+                Function(
+                    f"\tdef {r2._function_name}(self):",
+                    [
+                        f"""\t\theaders = {{'bar': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}']['foo']}}""",
+                        "\t\tcookies = {}",
+                        f"\t\t{REQUEST_VARIABLE_NAME} = requests.get('{GOOGLE}', headers=headers, cookies=cookies)",
                         f"\t\tself.{REQUEST_MATCHING_DATA_DICT_NAME}['{r2._function_name}'] = {REQUEST_VARIABLE_NAME}",
                     ],
                 ),
