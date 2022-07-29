@@ -1,4 +1,3 @@
-# from dataclasses import dataclass, field
 import dataclasses
 import re
 from typing import Any
@@ -232,7 +231,7 @@ class _ReplaceRequestify:
             _RequestifyObject, ResponseDataType
         ] = {}
         self._matching_data: list[RequestMatch] = []
-        # self._matching_headers: dict[str, dict[str, tuple[str, str]]] = {}
+        self._matching_headers: list[RequestMatch] = []
         # self._matching_url_content: dict[str, dict[str, tuple[str, str]]] = {}
         self._map_requests_to_responses()
         self._initialize_matching_data()
@@ -247,12 +246,26 @@ class _ReplaceRequestify:
 
     def _initialize_matching_data(self) -> None:
         for current_request in self._requests:
-            self._match(current_request)
+            self._match_everything(current_request)
 
-    def _match(self, current_request):
-        request_body = current_request._data
+    def _match_everything(self, current_request):
+        self._match_data(current_request)
+        self._match_headers(current_request)
+        # self._match_urls(current_request)
 
-        for current_field, current_value in request_body.items():
+    def _match_data(self, current_request):
+        self._match(current_request, current_request._data, self._matching_data)
+
+    def _match_headers(self, current_request):
+        self._match(current_request, current_request._headers, self._matching_headers)
+
+    def _match(
+        self,
+        current_request: _RequestifyObject,
+        search_dict: dict,
+        save_list: list[RequestMatch],
+    ):
+        for current_field, current_value in search_dict.items():
             matching_field, indices = self._get_matching_field_and_indices(
                 current_request, current_value
             ) or (None, [])
@@ -268,7 +281,7 @@ class _ReplaceRequestify:
                     current_value,
                     indices,
                 )
-                self._matching_data.append(match)
+                save_list.append(match)
 
     @staticmethod
     def _get_key_and_index_where_values_match(

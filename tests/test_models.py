@@ -354,3 +354,19 @@ class TestReplaceRequestify(object):
             RequestMatch(r2, "span", r1, "baz", 34, [1, 1]),
             RequestMatch(r2, "eggs", r1, "eggs", 2, [1, 2, 0]),
         ]
+
+    def test_replace_headers(self, mocker):
+        mocker.patch(
+            "requestify.models.utils.get_responses",
+            return_value=[{"foo": "1", "bar": 2}, None],
+        )
+        curl1 = f"curl -X GET {GOOGLE}"
+        curl2 = f"curl -X GET {GOOGLE} -H 'eggs: 1'"
+        r1 = _RequestifyObject(curl1)
+        r2 = _RequestifyObject(curl2)
+        rr = _ReplaceRequestify(curl1, curl2)
+        r2._function_name = rr._requests[1]._function_name
+
+        assert rr._matching_headers == [
+            RequestMatch(r2, "eggs", r1, "foo", "1", []),
+        ]
