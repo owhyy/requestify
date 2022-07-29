@@ -12,7 +12,6 @@ if TYPE_CHECKING:
         _RequestifyObject,
         _RequestifyList,
         _ReplaceRequestify,
-        RequestMatch,
     )
 
 
@@ -49,7 +48,7 @@ Functions
 
 
 def generate_function_text(function: Function) -> str:
-    return function.name + "".join(function.body).replace('"', '`').replace('`', '')
+    return function.name + "".join(function.body).replace('"', "`").replace("`", "")
 
 
 def generate_class_function(base: FunctionBase) -> Function:

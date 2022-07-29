@@ -5,7 +5,6 @@ from requestify.models import (
     _ReplaceRequestify,
     _RequestifyObject,
     _RequestifyList,
-    RequestMatch,
 )
 from .helpers import mock_get_responses
 
@@ -173,7 +172,7 @@ class TestReplaceRequestify(object):
         rr = _ReplaceRequestify(curl)
         assert rr._requests._requests[0] == _RequestifyList(curl)._requests[0] == r
         assert rr._requests_and_their_responses == {r: {"data": 1}}
-        assert rr._matching_data == []
+        assert r._data == {}
 
     def test_replace_requests_no_data_to_replace(self, mocker):
         mocker.patch(
@@ -190,7 +189,7 @@ class TestReplaceRequestify(object):
             r1: {"foo": "bar"},
             r2: {"foo": "xyz"},
         }
-        assert rr._matching_data == []
+        assert r2._data == {}
 
     def test_initialize_responses_dict(self, mocker):
         mock_get_responses(mocker)
@@ -204,25 +203,33 @@ class TestReplaceRequestify(object):
         mocker.patch(
             "requestify.models.utils.get_responses",
             #               GET           POST
-            return_value=[{"data": None}, None],
+            return_value=[{"foo": None}, None],
         )
         r1 = f"curl -X GET {GOOGLE}"
-        r2 = f"""curl -X POST -d '{{"data": ""}}' {GOOGLE}"""
+        r2 = f"""curl -X POST -d '{{"foo": ""}}' {GOOGLE}"""
         rr = _ReplaceRequestify(r1, r2)
-        assert rr._matching_data == []
+        _, r = rr._requests
+        assert r._data == {"foo": ""}
 
     def test_has_matching_data_dict(self, mocker):
         mocker.patch(
             "requestify.models.utils.get_responses",
-            #               GET       POST
             return_value=[{"foo": 1}, None],
+        )
+
+        mocker.patch(
+            "requestify.models._ReplaceRequestify._create_new_assignment",
+            return_value="span",
         )
         curl1 = f"curl -X GET {GOOGLE}"
         curl2 = f"""curl -X POST -d '{{"bar": 1}}' {GOOGLE}"""
-        r1 = _RequestifyObject(curl1)
-        r2 = _RequestifyObject(curl2)
+
+        normal_req = _RequestifyObject(curl2)
+        assert normal_req._data == {"bar": 1}
+
         rr = _ReplaceRequestify(curl1, curl2)
-        assert rr._matching_data == [RequestMatch(r2, "bar", r1, "foo", 1, [])]
+        _, replaced_request = rr._requests
+        assert replaced_request._data == {"bar": "span"}
 
     def test_has_matching_data_list(self, mocker):
         mocker.patch(
