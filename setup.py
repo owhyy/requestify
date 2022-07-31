@@ -23,5 +23,6 @@ setup(
         "asyncio",
         "urllib3",
         "pytest",
+        "pytest-mock"
     ],
 )
