@@ -1,6 +1,5 @@
-import dataclasses
 import re
-from typing import Any
+from typing import Any, Optional
 from collections import defaultdict
 from requestify import utils
 from .constants import DATA_HANDLER, REQUEST_MATCHING_DATA_DICT_NAME
@@ -11,7 +10,7 @@ class _RequestifyObject(object):
         return self._function_name
 
     def __repr__(self):
-        return f"RequestifyObject({self._base_string})"
+        return f'RequestifyObject({self._base_string})'
 
     def __key(self):
         return (
@@ -36,36 +35,36 @@ class _RequestifyObject(object):
             )
         return NotImplemented
 
-    def __init__(self, base_string: str) -> None:
-        self._base_string = " ".join(base_string.replace("\\", "").split())
-        self._url = ""
-        self._method = "get"
-        self._headers = {}
-        self._cookies = {}
-        self._data: RequestDataType = dict()
+    def __init__(self, base_string: str):
+        self._base_string = ' '.join(base_string.replace('\\', '').split())
+        self._url = ''
+        self._method = 'get'
+        self._headers: dict[str, Any] = {}
+        self._cookies: dict[str, Any] = {}
+        self._data: dict[str, Any] = {}
 
-        self._function_name = ""
+        self._function_name = ''
         self._generate()
 
     def _generate(self) -> None:
-        meta = self._base_string.split(" ", 2)
-        assert len(meta) > 1, "No URL provided"
-        assert meta[0] == "curl", "Not a valid cURL request"
+        meta = self._base_string.split(' ', 2)
+        assert len(meta) > 1, 'No URL provided'
+        assert meta[0] == 'curl', 'Not a valid cURL request'
 
         if len(meta) == 2:
             url = meta[1]
             self._initialize_curl_and_url_only(url)
         else:
-            self._initialize_complete_request(" ".join(meta[1:]))
+            self._initialize_complete_request(' '.join(meta[1:]))
 
         self._set_function_name()
 
     def _initialize_curl_and_url_only(self, url: str) -> None:
         if re.search(utils.URL_REGEX, url):
             self._url = url
-            self._method = "get"
+            self._method = 'get'
         else:
-            raise ValueError("Request method not specified, and is not a GET")
+            raise ValueError('Request method not specified, and is not a GET')
 
     def _initialize_complete_request(self, meta: str) -> None:
         self._set_url(meta)
@@ -81,8 +80,8 @@ class _RequestifyObject(object):
             dataflag, method = found.groups()
 
             if dataflag:
-                if self._method == "get":
-                    self._method = "post"
+                if self._method == 'get':
+                    self._method = 'post'
             elif method:
                 self._method = method.strip("'").strip('"').lower()
         else:
@@ -94,18 +93,18 @@ class _RequestifyObject(object):
         opts = utils.uppercase_boolean_values(opts)
         self._set_body(opts)
 
-        headers = [option[1] for option in opts if option[0] == "-H"]
+        headers = [option[1] for option in opts if option[0] == '-H']
         self._set_headers(headers)
 
     # requests does not have support for flags such as --compressed, --resolve,
     # so there's no way to convert
     def _get_opts(self, meta: str) -> list[tuple[str, str]]:
         opts = utils.find_and_get_opts(meta)
-        assert len(opts) % 2 == 0, "Request header(s) or flag(s) missing"
+        assert len(opts) % 2 == 0, 'Request header(s) or flag(s) missing'
         return [
             (flag, data)
             for flag, data in utils.pairwise(opts)
-            if flag == "-H" or flag in DATA_HANDLER
+            if flag == '-H' or flag in DATA_HANDLER
         ]
 
     def _set_body(self, opts: list[tuple[str, str]]) -> None:
@@ -117,28 +116,28 @@ class _RequestifyObject(object):
     def _set_headers(self, headers: list[str]) -> None:
         for header in headers:
             try:
-                k, v = header.split(": ", 1)
+                k, v = header.split(': ', 1)
             except ValueError:
-                print(f"invalid data: {header}")
+                print(f'invalid data: {header}')
                 raise
 
-            if k.lower() == "cookie":
+            if k.lower() == 'cookie':
                 self._set_cookie(v)
             else:
                 self._headers[k] = v
 
     def _set_cookie(self, text: str) -> None:
-        cookies = text.split("; ")
+        cookies = text.split('; ')
         for cookie in cookies:
             try:
-                k, v = cookie.split("=", 1)
+                k, v = cookie.split('=', 1)
                 self._cookies[k] = v
             except ValueError:
                 raise
 
     def _set_function_name(self) -> None:
         netloc = utils.get_netloc(self._url)
-        function_name = f"{self._method}_{netloc}"
+        function_name = f'{self._method}_{netloc}'
         self._function_name = function_name
 
     # def __write_to_file(self, file, with_headers=True, with_cookies=True):
@@ -185,10 +184,10 @@ class _RequestifyList(object):
         return self._requests[index]
 
     def __str__(self):
-        return f"RequestifyList{[request.__str__() for request in self._requests]}"
+        return f'RequestifyList{[request.__str__() for request in self._requests]}'
 
     def __repr__(self):
-        return f"RequestifyList{[request.__repr__() for request in self._requests]}"
+        return f'RequestifyList{[request.__repr__() for request in self._requests]}'
 
     def _generate(self) -> None:
         for curl in self._base_list:
@@ -208,17 +207,13 @@ class _RequestifyList(object):
             self._existing_function_names[base_function_name] += 1
 
 
-RequestDataType = dict[str, Any]
-ResponseDataType = dict[str, RequestDataType | list[RequestDataType]]
-
-
 class _ReplaceRequestify:
     def __init__(self, *curls):
         self._requests = _RequestifyList(*curls)
 
         # requests and data they produced
         self._requests_and_their_responses: dict[
-            _RequestifyObject, ResponseDataType
+            _RequestifyObject, dict[str, Any] | list[dict[str, Any]]
         ] = {}
         self._map_requests_to_responses()
         self._initialize_matching_data()
@@ -226,7 +221,7 @@ class _ReplaceRequestify:
         # self._initialize_matching_url_values()
 
     def _map_requests_to_responses(self) -> None:
-        assert len(self._requests) > 0, "There must be at least one request"
+        assert len(self._requests) > 0, 'There must be at least one request'
         responses = utils.get_responses(self._requests)
         for request, response in zip(self._requests, responses):
             self._requests_and_their_responses[request] = response
@@ -235,24 +230,23 @@ class _ReplaceRequestify:
         for current_request in self._requests:
             self._match_everything(current_request)
 
-    def _match_everything(self, current_request):
+    def _match_everything(self, current_request: _RequestifyObject):
         self._match_data(current_request)
         self._match_headers(current_request)
         # self._match_urls(current_request)
 
-    def _match_data(self, current_request):
-        self._match(current_request, current_request._data, current_request._data)
+    def _match_data(self, current_request: _RequestifyObject):
+        self._match(current_request, current_request._data)
 
-    def _match_headers(self, current_request):
-        self._match(current_request, current_request._headers, current_request._headers)
+    def _match_headers(self, current_request: _RequestifyObject):
+        self._match(current_request, current_request._headers)
 
     def _match(
         self,
         current_request: _RequestifyObject,
-        search_dict: dict,
-        save_variable: dict,
+        replacement_dict: dict,
     ):
-        for current_field, current_value in search_dict.items():
+        for current_field, current_value in replacement_dict.items():
             matching_field, indices = self._get_matching_field_and_indices(
                 current_request, current_value
             ) or (None, [])
@@ -260,7 +254,7 @@ class _ReplaceRequestify:
                 current_request, current_value
             )
             if matching_field and matching_request:
-                save_variable[current_field] = self._create_new_assignment(
+                replacement_dict[current_field] = self._create_new_assignment(
                     matching_request,
                     matching_field,
                     indices,
@@ -268,8 +262,8 @@ class _ReplaceRequestify:
 
     @staticmethod
     def _get_key_and_index_where_values_match(
-        value: Any, d: list[dict] | dict, indices=None
-    ) -> tuple[Any, list[int]] | None:
+        value: Any, d: list[dict] | dict, indices: list[int] = None
+    ) -> Optional[tuple[Any, list[int]]]:
         indices = indices or []
         if isinstance(d, dict):
             for response_field, response_value in d.items():
@@ -290,7 +284,7 @@ class _ReplaceRequestify:
 
     def _get_matching_field_and_indices(
         self, request: _RequestifyObject, value: Any
-    ) -> tuple[Any, list[int]] | None:
+    ) -> Optional[tuple[Any, list[int]]]:
         for (
             saved_request,
             saved_response,
@@ -315,16 +309,17 @@ class _ReplaceRequestify:
         ) in self._requests_and_their_responses.items():
             if saved_request == request:
                 continue
-            if self._get_key_and_index_where_values_match(value, saved_response):
+            if self._get_key_and_index_where_values_match(
+                value, saved_response
+            ):
                 return saved_request
 
     @staticmethod
     def _create_new_assignment(
-        matching_request,
-        matching_field,
-        indices,
+        matching_request: _RequestifyObject,
+        matching_field: Any,
+        indices: list[int],
     ):
-        indices = "".join([f"[{index}]" for index in indices])
-        new_assignment = f"self.{REQUEST_MATCHING_DATA_DICT_NAME}['{matching_request._function_name}']['{matching_field}']{indices}"
-
+        indices_str = ''.join([f'[{index}]' for index in indices])
+        new_assignment = f"self.{REQUEST_MATCHING_DATA_DICT_NAME}['{matching_request._function_name}']['{matching_field}']{indices_str}"
         return new_assignment
