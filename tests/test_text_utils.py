@@ -104,8 +104,8 @@ class TestBaseGeneration:
 
     def test_indent_function_inside_class(self, unindented_function):
         indented_function = Function(
-            name="\tdef function_name():",
-            body=['\t\tprint("i am a function body")'],
+            "\tdef function_name():",
+            ['\t\tprint("i am a function body")'],
         )
         assert _indent_function_inside_class(unindented_function) == indented_function
 
@@ -198,7 +198,7 @@ class TestModelTextGeneration(object):
             "headers = {'x': 'y'}",
             "cookies = {'span': 'eggs'}",
             None,
-            f"{REQUEST_VARIABLE_NAME} = requests.{req._method}('{req._url}', headers=headers, cookies=cookies)",
+            f"{REQUEST_VARIABLE_NAME} = requests.post('{GOOGLE}', headers=headers, cookies=cookies)",
         ]
         assert generate_requestify_base_text(req, True, True) == base_response_text
 
@@ -210,7 +210,7 @@ class TestModelTextGeneration(object):
             "headers = {'x': 'y'}",
             None,
             "data = {'bar': 'foo'}",
-            f"{REQUEST_VARIABLE_NAME} = requests.{req._method}('{req._url}', headers=headers, data=data)",
+            f"{REQUEST_VARIABLE_NAME} = requests.post('{GOOGLE}', headers=headers, data=data)",
         ]
         assert generate_requestify_base_text(req, True, False) == base_response_text
 
@@ -222,7 +222,7 @@ class TestModelTextGeneration(object):
             None,
             None,
             "data = {'bar': 'foo'}",
-            f"{REQUEST_VARIABLE_NAME} = requests.{req._method}('{req._url}', data=data)",
+            f"{REQUEST_VARIABLE_NAME} = requests.post('{GOOGLE}', data=data)",
         ]
         assert generate_requestify_base_text(req, False, False) == base_response_text
 
@@ -234,7 +234,7 @@ class TestModelTextGeneration(object):
             "headers = {'x': 'y'}",
             None,
             "data = {'bar': 'foo'}",
-            f"{REQUEST_VARIABLE_NAME} = requests.{req._method}('{req._url}', headers=headers, data=data)",
+            f"{REQUEST_VARIABLE_NAME} = requests.post('{GOOGLE}', headers=headers, data=data)",
         ]
         assert generate_requestify_base_text(req, True, False) == base_response_text
 
@@ -246,7 +246,7 @@ class TestModelTextGeneration(object):
             None,
             "cookies = {'span': 'eggs'}",
             None,
-            f"{REQUEST_VARIABLE_NAME} = requests.{req._method}('{req._url}', cookies=cookies)",
+            f"{REQUEST_VARIABLE_NAME} = requests.post('{GOOGLE}', cookies=cookies)",
         ]
         assert generate_requestify_base_text(req, False, True) == base_response_text
 
@@ -258,7 +258,7 @@ class TestModelTextGeneration(object):
             None,
             None,
             None,
-            f"{REQUEST_VARIABLE_NAME} = requests.{req._method}('{req._url}')",
+            f"{REQUEST_VARIABLE_NAME} = requests.post('{GOOGLE}')",
         ]
         assert generate_requestify_base_text(req, False, False) == base_response_text
 

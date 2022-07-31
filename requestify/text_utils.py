@@ -15,23 +15,22 @@ if TYPE_CHECKING:
     )
 
 
+FunctionBase = namedtuple("FunctionBase", "name body")
 """
 name is the name of the function, body is function body
 """
-FunctionBase = namedtuple("FunctionBase", "name body")
 
+Function = namedtuple("Function", "name body")
 """
 name is `def name(self):` or `def name()`,
 where name is FunctionBase.name.
 body is FunctionBase.body, but indented
 """
-Function = namedtuple("Function", "name body")
 
+Class = namedtuple("Class", "name body")
 """
 name is REQUEST_CLASS_NAME, body is a list of `Function` objects
 """
-Class = namedtuple("Class", "name body")
-
 
 """
 General
