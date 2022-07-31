@@ -3,3 +3,5 @@ httpx
 asyncio
 urllib3
 requests
+pytest
+pytest-mock

@@ -1,118 +1,120 @@
-# !/usr/bin/env python3
-# -*- coding: utf-8 -*-
+import dataclasses
 import re
 from typing import Any
-import requests
 from collections import defaultdict
 from requestify import utils
+from .constants import DATA_HANDLER, REQUEST_MATCHING_DATA_DICT_NAME
 
 
-RESPONSES_DICT_NAME = "workflow"
-JSON_ERROR_NAME = "JSONDecodeError"
-
-RequestDataType = dict[str, Any]
-ResponseDataType = RequestDataType | list[RequestDataType]
-
-
-class RequestifyObject(object):
+class _RequestifyObject(object):
     def __str__(self):
-
-        return self.function_name
+        return self._function_name
 
     def __repr__(self):
-        return f"RequestifyObject({self.base_string})"
+        return f"RequestifyObject({self._base_string})"
 
-    # used for easier testing
-    def __eq__(self, other):
+    def __key(self):
         return (
-            self.base_string == other.base_string
-            and self.url == other.url
-            and self.method == other.method
-            and self.cookies == other.cookies
-            and self.data == other.data
-            and self.function_name == other.function_name
+            self._base_string,
+            self._url,
+            self._method,
+            self._function_name,
         )
 
+    def __hash__(self):
+        return hash(self.__key())
+
+    # TODO: test this
+    def __eq__(self, other):
+        if isinstance(other, _RequestifyObject):
+            return (
+                self.__key() == other.__key()
+                # cookies and data are unhashable, but they also need to match when
+                # checking for equality
+                and self._cookies == other._cookies
+                and self._data == other._data
+            )
+        return NotImplemented
+
     def __init__(self, base_string: str) -> None:
-        self.base_string = " ".join(base_string.replace("\\", "").split())
-        self.url = ""
-        self.method = "get"
-        self.headers = {}
-        self.cookies = {}
-        self.data: RequestDataType = dict()
+        self._base_string = " ".join(base_string.replace("\\", "").split())
+        self._url = ""
+        self._method = "get"
+        self._headers = {}
+        self._cookies = {}
+        self._data: RequestDataType = dict()
 
-        self.function_name = ""
-        self.__generate()
+        self._function_name = ""
+        self._generate()
 
-    def __generate(self) -> None:
-        meta = self.base_string.split(" ", 2)
+    def _generate(self) -> None:
+        meta = self._base_string.split(" ", 2)
         assert len(meta) > 1, "No URL provided"
         assert meta[0] == "curl", "Not a valid cURL request"
 
         if len(meta) == 2:
             url = meta[1]
-            self.__initialize_curl_and_url_only(url)
+            self._initialize_curl_and_url_only(url)
         else:
-            self.__initialize_complete_request(" ".join(meta[1:]))
+            self._initialize_complete_request(" ".join(meta[1:]))
 
-        self.__set_function_name()
+        self._set_function_name()
 
-    def __initialize_curl_and_url_only(self, url: str) -> None:
+    def _initialize_curl_and_url_only(self, url: str) -> None:
         if re.search(utils.URL_REGEX, url):
-            self.url = url
-            self.method = "get"
+            self._url = url
+            self._method = "get"
         else:
             raise ValueError("Request method not specified, and is not a GET")
 
-    def __initialize_complete_request(self, meta: str) -> None:
-        self.__set_url(meta)
-        self.__set_method(meta)
-        self.__set_opts(meta)
+    def _initialize_complete_request(self, meta: str) -> None:
+        self._set_url(meta)
+        self._set_method(meta)
+        self._set_opts(meta)
 
-    def __set_url(self, meta: str) -> None:
-        self.url = utils.format_url(utils.find_url_or_error(meta))
+    def _set_url(self, meta: str) -> None:
+        self._url = utils.format_url(utils.find_url_or_error(meta))
 
-    def __set_method(self, meta: str) -> None:
-        found = re.search(utils.METHOD_REGEX, meta)
+    def _set_method(self, meta: str) -> None:
+        found = utils.find_method(meta)
         if found:
-            dataflag = found.groups()[0]
-            method = found.groups()[1]
+            dataflag, method = found.groups()
 
             if dataflag:
-                if self.method == "get":
-                    self.method = "post"
+                if self._method == "get":
+                    self._method = "post"
             elif method:
-                self.method = method.strip("'").strip('"').lower()
+                self._method = method.strip("'").strip('"').lower()
         else:
             pass
             # raise
 
-    def __set_opts(self, meta: str) -> None:
-        opts = self.__get_opts(meta)
+    def _set_opts(self, meta: str) -> None:
+        opts = self._get_opts(meta)
         opts = utils.uppercase_boolean_values(opts)
-        self.__set_body(opts)
+        self._set_body(opts)
 
         headers = [option[1] for option in opts if option[0] == "-H"]
-        self.__set_headers(headers)
+        self._set_headers(headers)
 
     # requests does not have support for flags such as --compressed, --resolve,
     # so there's no way to convert
-    def __get_opts(self, meta: str) -> list[tuple[str, str]]:
+    def _get_opts(self, meta: str) -> list[tuple[str, str]]:
         opts = utils.find_and_get_opts(meta)
         assert len(opts) % 2 == 0, "Request header(s) or flag(s) missing"
         return [
             (flag, data)
             for flag, data in utils.pairwise(opts)
-            if flag == "-H" or flag in utils.DATA_HANDLER
+            if flag == "-H" or flag in DATA_HANDLER
         ]
 
-    def __set_body(self, opts: list[tuple[str, str]]) -> None:
+    def _set_body(self, opts: list[tuple[str, str]]) -> None:
         for option in opts:
             for flag, value in utils.pairwise(option):
-                if flag in utils.DATA_HANDLER:
-                    self.data = utils.DATA_HANDLER[flag](value)
+                if flag in DATA_HANDLER:
+                    self._data = DATA_HANDLER[flag](value)
 
-    def __set_headers(self, headers: list[str]) -> None:
+    def _set_headers(self, headers: list[str]) -> None:
         for header in headers:
             try:
                 k, v = header.split(": ", 1)
@@ -121,23 +123,23 @@ class RequestifyObject(object):
                 raise
 
             if k.lower() == "cookie":
-                self.__set_cookie(v)
+                self._set_cookie(v)
             else:
-                self.headers[k] = v
+                self._headers[k] = v
 
-    def __set_cookie(self, text: str) -> None:
+    def _set_cookie(self, text: str) -> None:
         cookies = text.split("; ")
         for cookie in cookies:
             try:
                 k, v = cookie.split("=", 1)
-                self.cookies[k] = v
+                self._cookies[k] = v
             except ValueError:
                 raise
 
-    def __set_function_name(self) -> None:
-        netloc = utils.get_netloc(self.url)
-        function_name = f"{self.method}_{netloc}"
-        self.function_name = function_name
+    def _set_function_name(self) -> None:
+        netloc = utils.get_netloc(self._url)
+        function_name = f"{self._method}_{netloc}"
+        self._function_name = function_name
 
     # def __write_to_file(self, file, with_headers=True, with_cookies=True):
     #     request = self.create_beautiful_response(with_headers, with_cookies)
@@ -165,286 +167,164 @@ class RequestifyObject(object):
     #
 
 
-class RequestifyList(object):
+class _RequestifyList(object):
     def __init__(self, *curls: str):
-        self.base_list = curls
-        self.requests: list[RequestifyObject] = []
-        self.existing_function_names = defaultdict(int)
-        self.__generate()
+        self._base_list = curls
+        self._requests: list[_RequestifyObject] = []
+        self._existing_function_names = defaultdict(int)
+        self._generate()
+
+    def __len__(self):
+        return len(self._requests)
+
+    def __iter__(self):
+        for request in self._requests:
+            yield request
+
+    def __getitem__(self, index):
+        return self._requests[index]
 
     def __str__(self):
-        return f"RequestifyList{[request.__str__() for request in self.requests]}"
+        return f"RequestifyList{[request.__str__() for request in self._requests]}"
 
     def __repr__(self):
-        return f"RequestifyList{[request.__repr__() for request in self.requests]}"
+        return f"RequestifyList{[request.__repr__() for request in self._requests]}"
 
-    def __generate(self) -> None:
-        for curl in self.base_list:
-            request = RequestifyObject(curl)
-            self.requests.append(request)
+    def _generate(self) -> None:
+        for curl in self._base_list:
+            request = _RequestifyObject(curl)
+            self._requests.append(request)
 
-        self.__set_function_names()
+        self._set_function_names()
 
-    def __set_function_names(self) -> None:
-        for request in self.requests:
-            base_function_name = request.function_name
-            function_count = self.existing_function_names[base_function_name]
+    def _set_function_names(self) -> None:
+        for request in self._requests:
+            base_function_name = request._function_name
+            function_count = self._existing_function_names[base_function_name]
             function_name = f"{base_function_name}{('_' + str(function_count) if function_count else '')}"
-            request.function_name = (
+            request._function_name = (
                 function_name if function_name else base_function_name
             )
-            self.existing_function_names[base_function_name] += 1
+            self._existing_function_names[base_function_name] += 1
 
 
-class ReplaceRequestify(RequestifyList):
+RequestDataType = dict[str, Any]
+ResponseDataType = dict[str, RequestDataType | list[RequestDataType]]
+
+
+class _ReplaceRequestify:
     def __init__(self, *curls):
-        super().__init__(*curls)
+        self._requests = _RequestifyList(*curls)
 
-        # the name of the function data it produced
-        self.function_names_and_their_responses: dict[str, ResponseDataType] = {}
-        self.matching_data = {}
-        # self.matching_headers = {}
+        # requests and data they produced
+        self._requests_and_their_responses: dict[
+            _RequestifyObject, ResponseDataType
+        ] = {}
+        self._map_requests_to_responses()
+        self._initialize_matching_data()
+        # self._initialize_matching_headers()
+        # self._initialize_matching_url_values()
 
-        self.__generate()
+    def _map_requests_to_responses(self) -> None:
+        assert len(self._requests) > 0, "There must be at least one request"
+        responses = utils.get_responses(self._requests)
+        for request, response in zip(self._requests, responses):
+            self._requests_and_their_responses[request] = response
 
-    def __generate(self) -> None:
-        # self.init_first_response()
-        self.initialize_responses_dict()
-        self.initialize_matching_data()
+    def _initialize_matching_data(self) -> None:
+        for current_request in self._requests:
+            self._match_everything(current_request)
 
-    def initialize_responses_dict(self) -> None:
-        assert len(self.requests) > 0, "There must be at least one request"
+    def _match_everything(self, current_request):
+        self._match_data(current_request)
+        self._match_headers(current_request)
+        # self._match_urls(current_request)
 
-        responses = utils.get_responses(self.requests)
-        self.map_all_functions_to_their_responses(responses)
+    def _match_data(self, current_request):
+        self._match(current_request, current_request._data, current_request._data)
 
-    def map_all_functions_to_their_responses(self, responses: list[Any]) -> None:
-        for request, response in zip(self.requests, responses):
-            self.map_response_to_current_function(request.function_name, response)
+    def _match_headers(self, current_request):
+        self._match(current_request, current_request._headers, current_request._headers)
 
-    def map_response_to_current_function(
-        self, function_name: str, response: Any
-    ) -> None:
-        if not isinstance(response, str):
-            self.function_names_and_their_responses[
-                function_name
-            ] = response
-
-    def initialize_matching_data(self) -> None:
-        for request in self.requests:
-            request_body = request.data
-            current_function = request.function_name
-            if request_body:
-                matching_data = self.get_functions_and_fields_matching_request_body(
-                    request_body
-                )
-                self.matching_data[current_function] = matching_data
-
-    def get_functions_and_fields_matching_request_body(
-        self, request_body: dict[str, str]
-    ) -> dict[str, tuple[str, int | None]]:
-        matching_functions_and_fields = defaultdict(list)
-
-        for request_body_item in request_body.items():
-            # 0 is name of field (content-type, Accept, ...), 1 is value (application/json, */*, ...)
-            field_name = request_body_item[0]
-            value = request_body_item[1]
-
-            function_name = self.get_function_producing_this_value(value)
-            matching_data = (field_name, self.get_data_matching_value(value))
-
-            if function_name and matching_data:
-                matching_functions_and_fields[function_name].append(matching_data)
-
-        return matching_functions_and_fields
-
-    def get_function_producing_this_value(self, value: str) -> str | None:
-        for function_name, response_data in self.function_names_and_their_responses.items():
-            if self.is_found_in_data(value, response_data):
-                return function_name
-
-    @staticmethod
-    def is_found_in_data(
-        value: str, data: dict[str, str] | list[dict[str, str]]
-    ) -> bool:
-        for response in data:
-            values = list(response.values())
-            if value in values:
-                return True
-
-        return False
-
-    def get_data_matching_value(self, value: str) -> tuple[str, int | None] | None:
-        for response in self.function_names_and_their_responses.values():
-            # if the response is a list, add index to tuple
-            if isinstance(response, list):
-                return self.get_field_name_and_index_where_values_match(
-                    value, response, True
-                )
-
-            else:
-                return self.get_field_name_and_index_where_values_match(
-                    value, response, False
+    def _match(
+        self,
+        current_request: _RequestifyObject,
+        search_dict: dict,
+        save_variable: dict,
+    ):
+        for current_field, current_value in search_dict.items():
+            matching_field, indices = self._get_matching_field_and_indices(
+                current_request, current_value
+            ) or (None, [])
+            matching_request = self._get_matching_request(
+                current_request, current_value
+            )
+            if matching_field and matching_request:
+                save_variable[current_field] = self._create_new_assignment(
+                    matching_request,
+                    matching_field,
+                    indices,
                 )
 
     @staticmethod
-    def get_field_name_and_index_where_values_match(
-        value: str, response: dict[str, str] | list[dict[str, str]], has_index=True
-    ) -> tuple[str, int | None] | None:
-        for index, data_dict in enumerate(response):
-            if data_dict:
-                for field_name, response_value in data_dict.items():
-                    # request_field_name = request_body_item[0]
-                    # value = request_body_item[1]
-                    #
-                    if value == response_value:
-                        if has_index:
-                            return_tuple = (request_field_name, (field_name, index))
-                        else:
-                            return_tuple = (request_field_name, (field_name, None))
+    def _get_key_and_index_where_values_match(
+        value: Any, d: list[dict] | dict, indices=None
+    ) -> tuple[Any, list[int]] | None:
+        indices = indices or []
+        if isinstance(d, dict):
+            for response_field, response_value in d.items():
+                if response_value == value:
+                    return (response_field, indices)
 
-                        return return_tuple
+        if isinstance(d, list):
+            for index, subd in enumerate(d):
+                key_and_index = (
+                    _ReplaceRequestify._get_key_and_index_where_values_match(
+                        value, subd, indices
+                    )
+                )
+                if key_and_index:
+                    key, prev_indices = key_and_index
+                    prev_indices.append(index)
+                    return (key, prev_indices)
 
-    # def init_first_response(self):
-    #     for requestify_object in self.requests:
-    #         response = get_response(requestify_object)
-    #
-    #         if is_valid_response(response):
-    #             self.map_response_to_current_function(
-    #                 requestify_object.function_name, response
-    #             )
-    #
-    # def add_new_request(self, requestify_object):
-    #     response = get_response(requestify_object)
-    #
-    #     if is_valid_response(response):
-    #         self.map_response_to_current_function(
-    #             requestify_object.function_name, response
-    #         )
+    def _get_matching_field_and_indices(
+        self, request: _RequestifyObject, value: Any
+    ) -> tuple[Any, list[int]] | None:
+        for (
+            saved_request,
+            saved_response,
+        ) in self._requests_and_their_responses.items():
+            # do not match responses returned by the same request we are trying to find matches for
+            if saved_request == request:
+                continue
+            field, indices = self._get_key_and_index_where_values_match(
+                value, saved_response
+            ) or (None, [])
+            if len(indices) > 0:
+                # iterative recursion appends indices in reverse order,
+                # so we need to reverse them to get the right order
+                indices.reverse()
 
+            return (field, indices)
 
-#
-#     @staticmethod
-#     def get_response_field_name_and_index(sought_value, list_of_dicts):
-#         for index, dict in enumerate(list_of_dicts):
-#             ret = ReplaceRequestify.get_field_name_matching_value(sought_value, dict)
-#             if ret:
-#                 return (ret, index)
-#
-#     @staticmethod
-#     def get_field_name_matching_value(sought_value, dict):
-#         for field_name, value in dict.items():
-#             if sought_value == value:
-#                 return field_name
-#
-#     @staticmethod
-#     def add_index_if_needed(data_string, index):
-#         data_string_with_index = ""
-#         if index is not None:
-#             data_string_with_index = data_string + f"[{index}],"
-#         else:
-#             data_string_with_index = data_string + ","
-#
-#         return data_string_with_index
-#
-#     def format_data_line(self, matching_data):
-#         data_string_with_index = ""
-#         data_parts = [f"data={{"]
-#
-#         for function_called, list_of_fields in matching_data.items():
-#             for request_field, (response_field, index) in list_of_fields:
-#                 data_part = f"'{request_field}': {RESPONSES_DICT_NAME}['{function_called}']['{response_field}']"
-#                 data_string_with_index = ReplaceRequestify.add_index_if_needed(
-#                     data_part, index
-#                 )
-#
-#                 data_parts.append(data_string_with_index)
-#
-#         data_string_with_index += "}"
-#         return "\n".join(data_parts)
-#
-#     @staticmethod
-#     def replace_response_data(response_as_list, formatted_data_line, has_data=False):
-#         response_with_replaced_data = response_as_list
-#
-#         if has_data:
-#             response_with_replaced_data[2] = formatted_data_line
-#
-#         return response_with_replaced_data
-#
-#     @staticmethod
-#     def replace_response_containing_data(response_as_list, formatted_data_line):
-#         return ReplaceRequestify.replace_response_data(
-#             response_as_list, formatted_data_line, has_data=True
-#         )
-#
-#     @staticmethod
-#     def replace_response_not_containing_data(response_as_list, formatted_data_line):
-#         return ReplaceRequestify.replace_response_data(
-#             response_as_list, formatted_data_line, has_data=True
-#         )
-#
-#     def get_formatted_response(self, request):
-#         base_response = super().create_base_response(request=request)
-#         matching_data = self.matching_data.get(request.function_name)
-#
-#         data_line = self.format_data_line(matching_data=matching_data)
-#         base_response[2] = data_line
-#
-#         if request.data:
-#             formatted_response = ReplaceRequestify.replace_response_containing_data(
-#                 base_response, data_line
-#             )
-#         else:
-#             formatted_response = ReplaceRequestify.replace_response_not_containing_data(
-#                 base_response, data_line
-#             )
-#
-#         pprint(formatted_response)
-#
-#     def get_replaced_functions(self):
-#         base_text = super().__create_base_response()
-#
-#     def __create_responses_text(self, with_headers=True, with_cookies=True):
-#
-#         requests_text = [
-#             generate_imports_text(["requests", "pprint"]),
-#             generate_class(
-#                 REQUESTS_CLASS_NAME,
-#             ),  # < should be all the functions
-#         ]
-#
-#     def __write_to_stdio(self, with_headers=True, with_cookies=True):
-#         requests_as_functions = self.__create_responses_text(
-#             with_headers=with_headers, with_cookies=with_cookies
-#         )
-#         print(requests_as_functions)
-#
-#     def to_screen(self):
-#         self.__write_to_stdio()
-#
-#
-# def __get_file(filename):
-#     requests = []
-#     request = ""
-#     with open(filename, mode="r") as in_file:
-#         for line in in_file:
-#             request += line
-#             if "curl" in line:
-#                 requests.append(request)
-#                 request = ""
-#     return requests
-#
-#
-# def from_file(filename, replace=False):
-#     requests_from_file = __get_file(filename)
-#     assert requests_from_file, "No data in the specified file"
-#
-#     if len(requests_from_file) == 1:
-#         requests = RequestifyObject(requests_from_file[0])
-#     else:
-#         if replace:
-#             requests = ReplaceRequestify(requests_from_file)
-#         else:
-#             requests = RequestifyList(requests_from_file)
-#     return requests
+    def _get_matching_request(self, request: _RequestifyObject, value: Any):
+        for (
+            saved_request,
+            saved_response,
+        ) in self._requests_and_their_responses.items():
+            if saved_request == request:
+                continue
+            if self._get_key_and_index_where_values_match(value, saved_response):
+                return saved_request
+
+    @staticmethod
+    def _create_new_assignment(
+        matching_request,
+        matching_field,
+        indices,
+    ):
+        indices = "".join([f"[{index}]" for index in indices])
+        new_assignment = f"self.{REQUEST_MATCHING_DATA_DICT_NAME}['{matching_request._function_name}']{indices}['{matching_field}']"
+
+        return new_assignment
