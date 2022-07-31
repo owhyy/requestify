@@ -325,6 +325,6 @@ class _ReplaceRequestify:
         indices,
     ):
         indices = "".join([f"[{index}]" for index in indices])
-        new_assignment = f"self.{REQUEST_MATCHING_DATA_DICT_NAME}['{matching_request._function_name}']{indices}['{matching_field}']"
+        new_assignment = f"self.{REQUEST_MATCHING_DATA_DICT_NAME}['{matching_request._function_name}']['{matching_field}']{indices}"
 
         return new_assignment

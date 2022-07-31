@@ -429,7 +429,7 @@ class TestModelTextGeneration(object):
                     [
                         "\t\theaders = {}",
                         "\t\tcookies = {}",
-                        f"""\t\tdata = {{'span': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}'][1][1]['baz'], 'eggs': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}'][1][2][0]['eggs']}}""",
+                        f"""\t\tdata = {{'span': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}']['baz'][1][1], 'eggs': self.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}']['eggs'][1][2][0]}}""",
                         f"\t\t{REQUEST_VARIABLE_NAME} = requests.post('{GOOGLE}', headers=headers, cookies=cookies, data=data)",
                         f"\t\tself.{REQUEST_MATCHING_DATA_DICT_NAME}['{r2._function_name}'] = {REQUEST_VARIABLE_NAME}",
                     ],
