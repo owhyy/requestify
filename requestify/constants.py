@@ -1,6 +1,6 @@
 import re
-from . import utils
 from urllib import parse
+from . import utils
 
 JSON_ERROR_NAME = 'JSONDecodeError'
 

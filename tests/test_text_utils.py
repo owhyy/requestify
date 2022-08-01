@@ -173,7 +173,7 @@ class TestModelTextGeneration(object):
         text = generate_requestify_list_function(req, True, True)
         assert req._requests[0]._function_name in text[0].name
 
-    def test_base_requstify_full(self):
+    def test_base_requestify_full(self):
         req = _RequestifyObject(
             f"""curl -X POST -H "x: y" -H "Cookie: span=eggs" -d '{{"bar": "foo"}}' {GOOGLE}"""
         )
@@ -334,9 +334,7 @@ class TestModelTextGeneration(object):
 
         rl = _RequestifyList(req)
         reqs = rl._requests
-        text = [
-            Function(f'def {reqs[0]._function_name}():', body),
-        ]
+        text = [Function(f'def {reqs[0]._function_name}():', body)]
 
         assert generate_requestify_list_function(rl) == text
 
@@ -387,7 +385,7 @@ class TestModelTextGeneration(object):
 
     def test_generate_replacement_matching_dict(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             #               GET       POST
             return_value=[{'foo': 1}, None],
         )
@@ -430,7 +428,7 @@ class TestModelTextGeneration(object):
 
     def test_generate_replacement_matching_list_element(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             return_value=[
                 [{'span': 5}, [{'xyz': 10}, {'baz': 34}, [{'eggs': 2}]]],
                 None,
@@ -475,7 +473,7 @@ class TestModelTextGeneration(object):
 
     def test_generate_replacement_headers(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             return_value=[{'foo': '1'}, None],
         )
         curl1 = f'curl -X GET {GOOGLE}'
@@ -516,7 +514,7 @@ class TestModelTextGeneration(object):
 
     def test_generate_replacement_headers_and_data(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             return_value=[{'foo': '1'}, None],
         )
         curl1 = f'curl -X GET {GOOGLE}'

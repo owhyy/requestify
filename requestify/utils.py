@@ -1,14 +1,14 @@
 from __future__ import annotations
-from .constants import URL_REGEX, METHOD_REGEX, OPTS_REGEX
 from typing import Any, TYPE_CHECKING
-import httpx
 import itertools
 import asyncio
-import requests
 import json
 import re
-from black import format_str, FileMode
+import httpx
+import requests
 from urllib import parse
+from black import format_str, FileMode
+from .constants import URL_REGEX, METHOD_REGEX, OPTS_REGEX, DATA_HANDLER
 
 
 if TYPE_CHECKING:
@@ -65,10 +65,22 @@ def flatten_list(l: list) -> list:
     return list(itertools.chain.from_iterable(l))
 
 
-def find_and_get_opts(meta: str) -> list[str]:
+def find_opts(meta: str) -> list[str]:
     opts = re.findall(OPTS_REGEX, meta)
     flat_opts = flatten_list(opts)
     return [option for option in flat_opts if option]
+
+
+# requests does not have support for flags such as --compressed, --resolve,
+# so there's no way to convert
+def _get_opts(meta: str) -> list[tuple[str, str]]:
+    opts = find_opts(meta)
+    assert len(opts) % 2 == 0, 'Request header(s) or flag(s) missing'
+    return [
+        (flag, data)
+        for flag, data in pairwise(opts)
+        if flag == '-H' or flag in DATA_HANDLER
+    ]
 
 
 def split_list(l: list[str]) -> list[str]:
@@ -195,8 +207,6 @@ def get_netloc(url: str) -> str:
         netloc = url_parts.netloc
         if netloc:
             return beautify_netloc(netloc)
-        else:
-            raise ValueError('Not a valid netloc')
+        raise ValueError('Not a valid netloc')
 
-    else:
-        raise ValueError('Not a valid url')
+    raise ValueError('Not a valid url')

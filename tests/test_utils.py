@@ -55,7 +55,7 @@ class TestUtils:
         meta = "-X POST oogabooga.com -H 'good: yes' -H 'ok: notok'"
         opts = ['-H', 'good: yes', '-H', 'ok: notok']
 
-        assert utils.find_and_get_opts(meta) == opts
+        assert utils.find_opts(meta) == opts
 
     def test_split_list(self):
         assert utils.split_list(['ok', 'ok 123 booya']) == [

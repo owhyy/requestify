@@ -1,15 +1,15 @@
 import argparse
 import pyperclip
 import sys
-from requestify.models import RequestifyList, RequestifyObject
-from replace import ReplaceRequestify
+from requestify.models import _RequestifyList, _RequestifyObject
+from replace import _ReplaceRequestify
 import replace
 
 
 def __get_file(filename):
     requests = []
     request = ''
-    with open(filename, mode='r') as in_file:
+    with open(filename, mode='r', encoding='utf8') as in_file:
         for line in in_file:
             request += line
             if 'curl' in line:

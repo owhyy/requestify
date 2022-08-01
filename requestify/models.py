@@ -1,11 +1,21 @@
 import re
 from typing import Any, Optional
 from collections import defaultdict
-from requestify import utils
-from .constants import DATA_HANDLER, REQUEST_MATCHING_DATA_DICT_NAME
+from .utils import (
+    pairwise,
+    uppercase_boolean_values,
+    format_url,
+    find_method,
+    find_url_or_error,
+    find_opts,
+    _get_opts,
+    get_netloc,
+    get_responses,
+)
+from .constants import DATA_HANDLER, REQUEST_MATCHING_DATA_DICT_NAME, URL_REGEX
 
 
-class _RequestifyObject(object):
+class _RequestifyObject:
     def __str__(self):
         return self._function_name
 
@@ -28,8 +38,8 @@ class _RequestifyObject(object):
         if isinstance(other, _RequestifyObject):
             return (
                 self.__key() == other.__key()
-                # cookies and data are unhashable, but they also need to match when
-                # checking for equality
+                # cookies and data are unhashable,
+                # but they also need to match when checking for equality
                 and self._cookies == other._cookies
                 and self._data == other._data
             )
@@ -60,7 +70,7 @@ class _RequestifyObject(object):
         self._set_function_name()
 
     def _initialize_curl_and_url_only(self, url: str) -> None:
-        if re.search(utils.URL_REGEX, url):
+        if re.search(URL_REGEX, url):
             self._url = url
             self._method = 'get'
         else:
@@ -72,10 +82,10 @@ class _RequestifyObject(object):
         self._set_opts(meta)
 
     def _set_url(self, meta: str) -> None:
-        self._url = utils.format_url(utils.find_url_or_error(meta))
+        self._url = format_url(find_url_or_error(meta))
 
     def _set_method(self, meta: str) -> None:
-        found = utils.find_method(meta)
+        found = find_method(meta)
         if found:
             dataflag, method = found.groups()
 
@@ -89,54 +99,43 @@ class _RequestifyObject(object):
             # raise
 
     def _set_opts(self, meta: str) -> None:
-        opts = self._get_opts(meta)
-        opts = utils.uppercase_boolean_values(opts)
+        opts = _get_opts(meta)
+        opts = uppercase_boolean_values(opts)
         self._set_body(opts)
 
         headers = [option[1] for option in opts if option[0] == '-H']
         self._set_headers(headers)
 
-    # requests does not have support for flags such as --compressed, --resolve,
-    # so there's no way to convert
-    def _get_opts(self, meta: str) -> list[tuple[str, str]]:
-        opts = utils.find_and_get_opts(meta)
-        assert len(opts) % 2 == 0, 'Request header(s) or flag(s) missing'
-        return [
-            (flag, data)
-            for flag, data in utils.pairwise(opts)
-            if flag == '-H' or flag in DATA_HANDLER
-        ]
-
     def _set_body(self, opts: list[tuple[str, str]]) -> None:
         for option in opts:
-            for flag, value in utils.pairwise(option):
+            for flag, value in pairwise(option):
                 if flag in DATA_HANDLER:
                     self._data = DATA_HANDLER[flag](value)
 
     def _set_headers(self, headers: list[str]) -> None:
-        for header in headers:
-            try:
+        header = None
+        try:
+            for header in headers:
                 k, v = header.split(': ', 1)
-            except ValueError:
-                print(f'invalid data: {header}')
-                raise
-
-            if k.lower() == 'cookie':
-                self._set_cookie(v)
-            else:
-                self._headers[k] = v
+                if k.lower() == 'cookie':
+                    self._set_cookie(v)
+                else:
+                    self._headers[k] = v
+        except ValueError:
+            print(f'invalid data: {header}')
+            raise
 
     def _set_cookie(self, text: str) -> None:
-        cookies = text.split('; ')
-        for cookie in cookies:
-            try:
+        try:
+            cookies = text.split('; ')
+            for cookie in cookies:
                 k, v = cookie.split('=', 1)
                 self._cookies[k] = v
-            except ValueError:
-                raise
+        except ValueError:
+            raise
 
     def _set_function_name(self) -> None:
-        netloc = utils.get_netloc(self._url)
+        netloc = get_netloc(self._url)
         function_name = f'{self._method}_{netloc}'
         self._function_name = function_name
 
@@ -162,7 +161,7 @@ class _RequestifyObject(object):
     #         method=self.method, url=self.url, headers=self.headers, cookies=self.cookies
     #     )
     #
-    #     return utils.get_json_or_text(request)
+    #     return .get_json_or_text(request)
     #
 
 
@@ -222,7 +221,7 @@ class _ReplaceRequestify:
 
     def _map_requests_to_responses(self) -> None:
         assert len(self._requests) > 0, 'There must be at least one request'
-        responses = utils.get_responses(self._requests)
+        responses = get_responses(self._requests)
         for request, response in zip(self._requests, responses):
             self._requests_and_their_responses[request] = response
 
@@ -262,7 +261,7 @@ class _ReplaceRequestify:
 
     @staticmethod
     def _get_key_and_index_where_values_match(
-        value: Any, d: list[dict] | dict, indices: list[int] = None
+        value: Any, d: list[dict] | dict, indices: Optional[list[int]] = None
     ) -> Optional[tuple[Any, list[int]]]:
         indices = indices or []
         if isinstance(d, dict):
@@ -281,6 +280,7 @@ class _ReplaceRequestify:
                     key, prev_indices = key_and_index
                     prev_indices.append(index)
                     return (key, prev_indices)
+        return None
 
     def _get_matching_field_and_indices(
         self, request: _RequestifyObject, value: Any
@@ -313,6 +313,7 @@ class _ReplaceRequestify:
                 value, saved_response
             ):
                 return saved_request
+        return None
 
     @staticmethod
     def _create_new_assignment(

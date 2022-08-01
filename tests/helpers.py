@@ -2,6 +2,6 @@
 # as it is both - slow and requires internet access
 def mock_get_responses(mocker):
     mocker.patch(
-        'requestify.models.utils.get_responses',
+        'requestify.models.get_responses',
         return_value=[{'data': 1}],
     )

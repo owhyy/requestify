@@ -179,7 +179,7 @@ class TestRequestifyList(object):
 class TestReplaceRequestify(object):
     def test_create_new_assignment_matches_dict(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             return_value=[{'bar': 1}, None],
         )
         curl1 = f'curl -X GET {GOOGLE}'
@@ -192,7 +192,7 @@ class TestReplaceRequestify(object):
 
     def test_create_new_assignment_response_multiple_same_value(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             return_value=[{'span': 1, 'eggs': 1}, None],
         )
         curl1 = f'curl -X GET {GOOGLE}'
@@ -206,7 +206,7 @@ class TestReplaceRequestify(object):
 
     def test_create_new_assignment_matches_list(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             return_value=[
                 [{'span': 5}, [{'xyz': 10}, {'baz': 34}, [{'bar': 2}]]],
                 None,
@@ -236,7 +236,7 @@ class TestReplaceRequestify(object):
 
     def test_replace_requests_no_data_to_replace(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             #               GET            POST
             return_value=[{'foo': 'bar'}, {'foo': 'xyz'}],
         )
@@ -255,7 +255,7 @@ class TestReplaceRequestify(object):
         mock_get_responses(mocker)
         curl = f'curl -X GET {GOOGLE}'
         mocker.patch(
-            'requestify.models.utils.get_response', return_value={'data': 1}
+            'requestify.models.get_responses', return_value=[{'data': 1}]
         )
         r = _RequestifyObject(curl)
         rr = _ReplaceRequestify(curl)
@@ -263,7 +263,7 @@ class TestReplaceRequestify(object):
 
     def test_has_matching_null_data(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             #               GET           POST
             return_value=[{'foo': None}, None],
         )
@@ -275,7 +275,7 @@ class TestReplaceRequestify(object):
 
     def test_has_matching_data_dict(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             return_value=[{'foo': 1}, None],
         )
 
@@ -291,7 +291,7 @@ class TestReplaceRequestify(object):
 
     def test_has_matching_data_list(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             #               GET               POST
             return_value=[{'foo': [1, 2, 3]}, None],
         )
@@ -310,7 +310,7 @@ class TestReplaceRequestify(object):
 
     def test_has_matching_data_string(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             #              GET    POST
             return_value=['foo', None],
         )
@@ -322,7 +322,7 @@ class TestReplaceRequestify(object):
 
     # def test_matches_first_if_multiple_same_values(self, mocker):
     #     mocker.patch(
-    #         "requestify.models.utils.get_responses",
+    #         "requestify.models.get_responses",
     #         #               GET                 POST
     #         return_value=[{"foo": 1, "bar": 1}, None],
     #     )
@@ -341,7 +341,7 @@ class TestReplaceRequestify(object):
 
     def test_does_not_match_itself(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             #             GET     POST
             return_value=[None, {'foo': 1}],
         )
@@ -353,7 +353,7 @@ class TestReplaceRequestify(object):
 
     def test_multiple_same_value(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             #               GET                 POST
             return_value=[{'foo': 1, 'bar': 1}, None],
         )
@@ -369,7 +369,7 @@ class TestReplaceRequestify(object):
 
     def test_multiple_different_value(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             #               GET                 POST
             return_value=[{'foo': 1, 'bar': 2}, None],
         )
@@ -385,7 +385,7 @@ class TestReplaceRequestify(object):
 
     def test_multiple_same_value_is_not_json(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             #              GET                        POST
             return_value=[[25, {'foo': 1, 'bar': 1}], None],
         )
@@ -401,7 +401,7 @@ class TestReplaceRequestify(object):
 
     def test_multiple_same_value_is_json(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             #              GET                        POST
             return_value=[[{'span': 5}, {'foo': 1, 'bar': 1}], None],
         )
@@ -417,7 +417,7 @@ class TestReplaceRequestify(object):
 
     def test_deeply_nested_list(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             return_value=[
                 [{'span': 5}, [{'xyz': 10}, {'baz': 34}, [{'eggs': 2}]]],
                 None,
@@ -435,7 +435,7 @@ class TestReplaceRequestify(object):
 
     def test_replace_headers(self, mocker):
         mocker.patch(
-            'requestify.models.utils.get_responses',
+            'requestify.models.get_responses',
             return_value=[{'foo': '1'}, None],
         )
         mocker.patch(
