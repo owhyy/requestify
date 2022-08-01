@@ -447,3 +447,33 @@ class TestReplaceRequestify(object):
         rr = _ReplaceRequestify(curl1, curl2)
         _, replaced_request = rr._requests
         assert replaced_request._headers == {'eggs': 'baz'}
+
+    def test_replace_url_int(self, mocker):
+        mocker.patch(
+            'requestify.models.get_responses',
+            return_value=[{'foo': 1}, None],
+        )
+
+        curl1 = f'curl -X GET {GOOGLE}'
+        curl2 = f'curl -X GET {GOOGLE}/foo/bar/1'
+        rr = _ReplaceRequestify(curl1, curl2)
+        r1, r2 = rr._requests
+        assert (
+            r2._url
+            == f"""f'{GOOGLE}/foo/bar/{{self.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}']['foo']}}'"""
+        )
+
+    def test_replace_url_str(self, mocker):
+        mocker.patch(
+            'requestify.models.get_responses',
+            return_value=[{'foo': 'bar'}, None],
+        )
+
+        curl1 = f'curl -X GET {GOOGLE}'
+        curl2 = f'curl -X GET {GOOGLE}/bar/span/eggs'
+        rr = _ReplaceRequestify(curl1, curl2)
+        r1, r2 = rr._requests
+        assert (
+            r2._url
+            == f"""f'{GOOGLE}/{{self.{REQUEST_MATCHING_DATA_DICT_NAME}['{r1._function_name}']['foo']}}/span/eggs'"""
+        )

@@ -10,7 +10,10 @@ from .utils import (
     find_opts,
     _get_opts,
     get_netloc,
+    get_scheme,
+    get_url_path,
     get_responses,
+    path_location_to_int,
 )
 from .constants import DATA_HANDLER, REQUEST_MATCHING_DATA_DICT_NAME, URL_REGEX
 
@@ -135,7 +138,7 @@ class _RequestifyObject:
             raise
 
     def _set_function_name(self) -> None:
-        netloc = get_netloc(self._url)
+        netloc = get_netloc(self._url, beautify=True)
         function_name = f'{self._method}_{netloc}'
         self._function_name = function_name
 
@@ -216,8 +219,6 @@ class _ReplaceRequestify:
         ] = {}
         self._map_requests_to_responses()
         self._initialize_matching_data()
-        # self._initialize_matching_headers()
-        # self._initialize_matching_url_values()
 
     def _map_requests_to_responses(self) -> None:
         assert len(self._requests) > 0, 'There must be at least one request'
@@ -232,13 +233,51 @@ class _ReplaceRequestify:
     def _match_everything(self, current_request: _RequestifyObject):
         self._match_data(current_request)
         self._match_headers(current_request)
-        # self._match_urls(current_request)
+        self._match_url(current_request)
 
     def _match_data(self, current_request: _RequestifyObject):
         self._match(current_request, current_request._data)
 
     def _match_headers(self, current_request: _RequestifyObject):
         self._match(current_request, current_request._headers)
+
+    def _match_url(self, current_request: _RequestifyObject):
+        current_url = current_request._url
+        path = get_url_path(current_url)
+        if path:
+            got_matched = False
+            path_values = path.split('/')
+            path_values = [
+                path_location_to_int(location)
+                for location in path_values
+                if location
+            ]
+            replaced_values = []
+            for path_value in path_values:
+                matching_field, indices = self._get_matching_field_and_indices(
+                    current_request, path_value
+                ) or (None, [])
+                matching_request = self._get_matching_request(
+                    current_request, path_value
+                )
+                if matching_field and matching_request:
+                    base_replacement_path_value = self._create_new_assignment(
+                        matching_request,
+                        matching_field,
+                        indices,
+                    )
+                    replacement_path_value = (
+                        f'{{{base_replacement_path_value}}}'
+                    )
+                    replaced_values.append(replacement_path_value)
+                    got_matched = True
+                else:
+                    replaced_values.append(path_value)
+            base = get_netloc(current_url, beautify=False) + '/'
+            scheme = get_scheme(current_url)
+            if got_matched:
+                url = "f'" + scheme + base + '/'.join(replaced_values) + "'"
+                current_request._url = url
 
     def _match(
         self,

@@ -1,5 +1,7 @@
 [tool.pyright]
 reportMissingImports = false
+reportUndefinedVariable = false
+reportUnusedVariable = false
 
 pythonVersion = "3.10"
 pythonPlatform = "Linux"

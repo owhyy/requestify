@@ -22,6 +22,7 @@ setup(
         'httpx',
         'asyncio',
         'urllib3',
+        'werkzeug',
         'pytest',
         'pytest-mock',
     ],

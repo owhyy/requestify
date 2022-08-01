@@ -1,12 +1,13 @@
 from __future__ import annotations
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Optional
 import itertools
 import asyncio
 import json
 import re
+from urllib.parse import parse_qsl
 import httpx
 import requests
-from urllib import parse
+from werkzeug.urls import url_parse
 from black import format_str, FileMode
 from .constants import URL_REGEX, METHOD_REGEX, OPTS_REGEX, DATA_HANDLER
 
@@ -182,7 +183,7 @@ def get_json_or_text(
 # Parses data if it's given in the url (application/x-www-form-urlencoded),
 # or formats it if given in body
 def get_data_dict(query: str) -> dict[str, str] | str:
-    data = dict(parse.parse_qsl(query))
+    data = dict(parse_qsl(query))
     alt = (
         query
         if query.startswith("'")
@@ -200,13 +201,32 @@ def beautify_netloc(netloc: str) -> str:
     return re.sub(url_regex, '_', netloc)
 
 
-def get_netloc(url: str) -> str:
-    url_parts = parse.urlparse(url)
+def get_netloc(url: str, beautify=False) -> str:
+    url_parts = url_parse(url)
 
     if url_parts:
         netloc = url_parts.netloc
         if netloc:
-            return beautify_netloc(netloc)
+            if beautify:
+                return beautify_netloc(netloc)
+            return netloc
         raise ValueError('Not a valid netloc')
 
     raise ValueError('Not a valid url')
+
+
+def get_url_path(url: str) -> Optional[str]:
+    return url_parse(url).path
+
+
+def get_scheme(url: str) -> Optional[str]:
+    scheme = url_parse(url).scheme
+    return scheme + '://' if scheme else 'https://'
+
+
+def path_location_to_int(path_location: str):
+    try:
+        location = int(path_location)
+    except ValueError:
+        location = path_location
+    return location
